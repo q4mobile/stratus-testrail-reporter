@@ -1,5 +1,5 @@
 <p align="center">
-    <img width="600" alt="Stratus Tools" src="">
+    <img width="600" alt="Stratus Tools" src="https://i.imgur.com/xws2SXy.png">
 </p>
 <p align="center">A custom Github Action that consumes Stratus test reports to create and execute TestRail runs</p>
 
