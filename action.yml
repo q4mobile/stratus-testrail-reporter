@@ -1,0 +1,27 @@
+name: "Stratus Testrail Reporter"
+description: "Stratus Testrail Reporter"
+author: "Q4Inc"
+inputs:
+  network_url:
+    required: true
+    description: The Testrail account domain name
+  username:
+    required: true
+    description: The username associated with the test runner
+  api_key:
+    required: true
+    description: The API key associated with the username
+  project_id:
+    required: true
+    description: The project ID of the Testrail project
+  suite_id:
+    required: true
+    description: The suite ID of the Testrail project
+  report_files:
+    required: true
+    description: Path to coverage summary
+    default:
+      ./testrail-report-1.json
+runs:
+  using: "node12"
+  main: "dist/index.js"
