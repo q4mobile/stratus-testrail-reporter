@@ -14,19 +14,19 @@ const core_1 = __nccwpck_require__(2186);
 const fs_1 = __nccwpck_require__(5747);
 const lodash_1 = __nccwpck_require__(250);
 const moment_timezone_1 = __importDefault(__nccwpck_require__(7936));
-const testrail_api_1 = __importDefault(__nccwpck_require__(5381));
+const testRail_api_1 = __importDefault(__nccwpck_require__(5621));
 const environment = process.env.NODE_ENV || "debug";
 async function run() {
     async function readFiles(filePaths) {
         return new Promise((resolve) => {
-            let testrailResults = [];
+            let testRailResults = [];
             const promises = filePaths.map((filePath) => {
                 return fs_1.promises
                     .readFile(filePath, "utf-8")
                     .then((fileResults) => {
                     try {
                         const results = JSON.parse(fileResults);
-                        testrailResults = testrailResults.concat(results);
+                        testRailResults = testRailResults.concat(results);
                     }
                     catch (error) {
                         (0, core_1.error)(`Parsing report file has failed: ${error.message}`);
@@ -40,12 +40,81 @@ async function run() {
             });
             Promise.all(promises)
                 .then(() => {
-                resolve(testrailResults);
+                resolve(testRailResults);
             })
                 .catch((error) => {
                 (0, core_1.setFailed)(error.message);
                 resolve([]);
             });
+        });
+    }
+    async function getTestRailMilestone(testRailClient, projectId) {
+        // @ts-ignore because is_started is not actually required
+        const milestoneFilters = { is_completed: 0 };
+        return new Promise((resolve) => {
+            testRailClient.getMilestones(projectId, milestoneFilters).then((milestonesResponse) => {
+                var _a;
+                // @ts-ignore because getMilestones response is typed incorrectly
+                const { milestones } = (_a = milestonesResponse.body) !== null && _a !== void 0 ? _a : {};
+                if ((0, lodash_1.isEmpty)(milestones)) {
+                    testRailClient.addMilestone(projectId, {
+                        name: `[${(0, moment_timezone_1.default)()
+                            .tz("America/New_York")
+                            .format("YYYY-MM-DD")}] Automated Mile Stone`
+                    }).then((addMilestoneResponse) => {
+                        var _a;
+                        resolve((_a = addMilestoneResponse.body) !== null && _a !== void 0 ? _a : {});
+                    });
+                }
+                else {
+                    resolve(milestones[0]);
+                }
+            });
+        });
+    }
+    function createTestPlan(testPlanOptions) {
+        testRailClient.addPlan(projectId, testPlanOptions).then((addPlanResponse) => {
+            var _a, _b, _c;
+            const { entries } = (_a = addPlanResponse.body) !== null && _a !== void 0 ? _a : {};
+            const { runs } = (_b = (entries || [])[0]) !== null && _b !== void 0 ? _b : {};
+            const { id } = (_c = (runs || [])[0]) !== null && _c !== void 0 ? _c : {};
+            addResults(id);
+        })
+            .catch((error) => {
+            (0, core_1.setFailed)(`Failed to add a new TestRail plan: ${extractError(error)}`);
+        });
+    }
+    function createTestRun(testRunOptions) {
+        testRailClient
+            .addRun(projectId, testRunOptions)
+            .then((addRunResponse) => {
+            var _a;
+            const { id } = (_a = addRunResponse.body) !== null && _a !== void 0 ? _a : {};
+            addResults(id);
+        })
+            .catch((error) => {
+            (0, core_1.setFailed)(`Failed to add a new TestRail run: ${extractError(error)}`);
+        });
+    }
+    function closeTestRun(runId) {
+        testRailClient.closeRun(runId).catch((error) => {
+            (0, core_1.setFailed)(`Failed to close the TestRail run: ${extractError(error)}`);
+        });
+    }
+    function addResults(runId) {
+        testRailClient
+            .addResultsForCases(runId, testRailResults)
+            .then(() => {
+            if (!regressionMode) {
+                closeTestRun(runId);
+            }
+            (0, core_1.setOutput)("Completion time:", new Date().toTimeString());
+        })
+            .catch((error) => {
+            (0, core_1.setFailed)(`Failed to add test case results to TestRail: ${extractError(error)}`);
+            if (!regressionMode) {
+                closeTestRun(runId);
+            }
         });
     }
     function extractError(error) {
@@ -54,29 +123,35 @@ async function run() {
             return "An error is present, but could not be parsed";
         return error.error || ((_a = error.message) === null || _a === void 0 ? void 0 : _a.error) || error.message || JSON.stringify(error);
     }
+    const regressionMode = (0, core_1.getInput)("target_branch") === "staging";
     const reportFiles = (0, core_1.getMultilineInput)("report_files");
     const projectId = parseInt((0, core_1.getInput)("project_id"), 10);
     const suiteId = parseInt((0, core_1.getInput)("suite_id"), 10);
-    const testrailOptions = {
+    const testRailOptions = {
         host: (0, core_1.getInput)("network_url"),
         user: (0, core_1.getInput)("username"),
         password: (0, core_1.getInput)("api_key"),
     };
-    const testrailClient = new testrail_api_1.default(testrailOptions);
-    const testrailResults = await readFiles(reportFiles);
-    if ((0, lodash_1.isEmpty)(testrailResults)) {
-        (0, core_1.setFailed)("No Testrail results were found.");
+    const testRailClient = new testRail_api_1.default(testRailOptions);
+    const testRailResults = await readFiles(reportFiles);
+    let testRailMilestone;
+    if ((0, lodash_1.isEmpty)(testRailResults)) {
+        (0, core_1.setFailed)("No TestRail results were found.");
         return;
     }
-    testrailClient
-        .getUserByEmail(testrailOptions.user)
+    if (regressionMode) {
+        testRailMilestone = await getTestRailMilestone(testRailClient, projectId);
+    }
+    testRailClient
+        .getUserByEmail(testRailOptions.user)
         .then((userResponse) => {
         var _a;
         const { id: userId } = (_a = userResponse.body) !== null && _a !== void 0 ? _a : {};
+        const milestoneId = (0, lodash_1.isEmpty)(testRailMilestone) ? null : testRailMilestone.id;
         const testRunOptions = {
             suite_id: suiteId,
             // @ts-ignore because milestone is not required
-            milestone_id: null,
+            milestone_id: milestoneId,
             name: `[${environment}][${(0, moment_timezone_1.default)()
                 .tz("America/New_York")
                 .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
@@ -84,41 +159,22 @@ async function run() {
             include_all: true,
             assignedto_id: userId,
         };
-        testrailClient
-            .addRun(projectId, testRunOptions)
-            .then((runResponse) => {
-            var _a;
-            const { id, untested_count } = (_a = runResponse === null || runResponse === void 0 ? void 0 : runResponse.body) !== null && _a !== void 0 ? _a : {};
-            testrailClient
-                .addResultsForCases(id, testrailResults)
-                .then(() => {
-                if (testrailResults.length < untested_count) {
-                    testrailClient.updateRun(id, {
-                        ...testRunOptions,
-                        name: `${testRunOptions.name} [INCOMPLETE]`,
-                    });
-                }
-                else {
-                    testrailClient.closeRun(id);
-                }
-                (0, core_1.setOutput)("Completion time:", new Date().toTimeString());
-                (0, core_1.setOutput)("Testrail run name:", testRunOptions.name);
-            })
-                .catch((error) => {
-                (0, core_1.setFailed)(`Failed to add test case results to Testrail: ${extractError(error)}`);
-                testrailClient.closeRun(id).catch((error) => {
-                    (0, core_1.setFailed)(`Failed to close the Testrail run: ${extractError(error)}`);
-                });
-                return;
-            });
-        })
-            .catch((error) => {
-            (0, core_1.setFailed)(`Failed to add a new Testrail run: ${extractError(error)}`);
-            return;
-        });
+        const testPlanOptions = {
+            milestone_id: milestoneId,
+            name: `[${environment}][${(0, moment_timezone_1.default)()
+                .tz("America/New_York")
+                .format("YYYY-MM-DD h:mm:ss")}] Automated Test Plan`,
+            entries: [testRunOptions]
+        };
+        if (regressionMode) {
+            createTestPlan(testPlanOptions);
+        }
+        else {
+            createTestRun(testRunOptions);
+        }
     })
         .catch((error) => {
-        (0, core_1.setFailed)(`Failed to get Testrail user: ${extractError(error)}`);
+        (0, core_1.setFailed)(`Failed to get TestRail user: ${extractError(error)}`);
         return;
     });
 }
@@ -51497,7 +51553,7 @@ var Buffer = __nccwpck_require__(5118).Buffer;
 var Key = __nccwpck_require__(6814);
 var PrivateKey = __nccwpck_require__(9602);
 var utils = __nccwpck_require__(575);
-var SSHBuffer = __nccwpck_require__(5621);
+var SSHBuffer = __nccwpck_require__(9491);
 var Dhe = __nccwpck_require__(7602);
 
 var supportedAlgos = {
@@ -51794,7 +51850,7 @@ module.exports = {
 };
 
 var assert = __nccwpck_require__(6631);
-var SSHBuffer = __nccwpck_require__(5621);
+var SSHBuffer = __nccwpck_require__(9491);
 var crypto = __nccwpck_require__(6417);
 var Buffer = __nccwpck_require__(5118).Buffer;
 var algs = __nccwpck_require__(6126);
@@ -53580,7 +53636,7 @@ var algs = __nccwpck_require__(6126);
 var utils = __nccwpck_require__(575);
 var Key = __nccwpck_require__(6814);
 var PrivateKey = __nccwpck_require__(9602);
-var SSHBuffer = __nccwpck_require__(5621);
+var SSHBuffer = __nccwpck_require__(9491);
 
 function algToKeyType(alg) {
 	assert.string(alg);
@@ -53751,7 +53807,7 @@ var Key = __nccwpck_require__(6814);
 var PrivateKey = __nccwpck_require__(9602);
 var pem = __nccwpck_require__(4324);
 var rfc4253 = __nccwpck_require__(8688);
-var SSHBuffer = __nccwpck_require__(5621);
+var SSHBuffer = __nccwpck_require__(9491);
 var errors = __nccwpck_require__(7979);
 
 var bcrypt;
@@ -55969,7 +56025,7 @@ var crypto = __nccwpck_require__(6417);
 var errs = __nccwpck_require__(7979);
 var utils = __nccwpck_require__(575);
 var asn1 = __nccwpck_require__(970);
-var SSHBuffer = __nccwpck_require__(5621);
+var SSHBuffer = __nccwpck_require__(9491);
 
 var InvalidAlgorithmError = errs.InvalidAlgorithmError;
 var SignatureParseError = errs.SignatureParseError;
@@ -56276,7 +56332,7 @@ Signature._oldVersionDetect = function (obj) {
 
 /***/ }),
 
-/***/ 5621:
+/***/ 9491:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Copyright 2015 Joyent, Inc.
@@ -56843,7 +56899,7 @@ function opensshCipherInfo(cipher) {
 
 /***/ }),
 
-/***/ 5381:
+/***/ 5621:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 var request = __nccwpck_require__(8699);

@@ -8,14 +8,14 @@ import {
 import { promises as fs } from "fs";
 import { isEmpty } from "lodash";
 import moment from "moment-timezone";
-import TestrailApiClient, { INewTestResult, INewTestRun } from "testrail-api";
+import TestRailApiClient, { IMilestone, IMilestoneFilters, INewTestResult, INewTestRun, ITestRun } from "testRail-api";
 
 const environment = process.env.NODE_ENV || "debug";
 
 async function run(): Promise<void> {
   async function readFiles(filePaths: string[]): Promise<INewTestResult[]> {
     return new Promise((resolve) => {
-      let testrailResults: INewTestResult[] = [];
+      let testRailResults: INewTestResult[] = [];
 
       const promises = filePaths.map((filePath) => {
         return fs
@@ -23,7 +23,7 @@ async function run(): Promise<void> {
           .then((fileResults) => {
             try {
               const results = JSON.parse(fileResults);
-              testrailResults = testrailResults.concat(results);
+              testRailResults = testRailResults.concat(results);
             } catch (error: any) {
               logError(`Parsing report file has failed: ${error.message}`);
               resolve([]);
@@ -37,7 +37,7 @@ async function run(): Promise<void> {
 
       Promise.all(promises)
         .then(() => {
-          resolve(testrailResults);
+          resolve(testRailResults);
         })
         .catch((error: any) => {
           setFailed(error.message);
@@ -46,38 +46,120 @@ async function run(): Promise<void> {
     });
   }
 
+  async function getTestRailMilestone(testRailClient: TestRailApiClient, projectId: number): Promise<IMilestone> {
+    // @ts-ignore because is_started is not actually required
+    const milestoneFilters: IMilestoneFilters = { is_completed: 0 };
+
+    return new Promise((resolve) => {
+      testRailClient.getMilestones(projectId, milestoneFilters).then((milestonesResponse) => {
+        // @ts-ignore because getMilestones response is typed incorrectly
+        const { milestones } = milestonesResponse.body ?? {};
+
+        if (isEmpty(milestones)) {
+          testRailClient.addMilestone(projectId, {
+            name: `[${moment()
+              .tz("America/New_York")
+              .format("YYYY-MM-DD")}] Automated Mile Stone`
+          }).then((addMilestoneResponse) => {
+            resolve(addMilestoneResponse.body ?? {});
+          });
+        } else {
+          resolve(milestones[0]);
+        }
+      });
+    });
+  }
+
+  function createTestPlan(testPlanOptions: any): void {
+    testRailClient.addPlan(projectId, testPlanOptions).then((addPlanResponse) => {
+      const { entries } = addPlanResponse.body ?? {};
+      const { runs } = (entries || [])[0] ?? {};
+      const { id } = (runs || [])[0] as ITestRun ?? {};
+
+      addResults(id);
+    })
+    .catch((error: any) => {
+      setFailed(`Failed to add a new TestRail plan: ${extractError(error)}`);
+    });
+  }
+
+  function createTestRun(testRunOptions: INewTestRun): void {
+    testRailClient
+      .addRun(projectId, testRunOptions)
+      .then((addRunResponse) => {
+        const { id } = addRunResponse.body ?? {};
+
+        addResults(id);
+      })
+      .catch((error: any) => {
+        setFailed(`Failed to add a new TestRail run: ${extractError(error)}`);
+      });
+  }
+
+  function closeTestRun(runId: number): void {
+    testRailClient.closeRun(runId).catch((error: any) => {
+      setFailed(`Failed to close the TestRail run: ${extractError(error)}`);
+    });
+  }
+
+  function addResults(runId: number): void {
+    testRailClient
+      .addResultsForCases(runId, testRailResults)
+      .then(() => {
+        if (!regressionMode) {
+          closeTestRun(runId);
+        }
+
+        setOutput("Completion time:", new Date().toTimeString());
+      })
+      .catch((error: any) => {
+        setFailed(`Failed to add test case results to TestRail: ${extractError(error)}`);
+
+        if (!regressionMode) {
+          closeTestRun(runId);
+        }
+      });
+  }
+
   function extractError(error: any): string {
     if (isEmpty(error)) return "An error is present, but could not be parsed";
 
     return error.error || error.message?.error || error.message || JSON.stringify(error);
   }
 
+  const regressionMode = getInput("target_branch") === "staging";
   const reportFiles: string[] = getMultilineInput("report_files");
   const projectId = parseInt(getInput("project_id"), 10);
   const suiteId = parseInt(getInput("suite_id"), 10);
-  const testrailOptions = {
+  const testRailOptions = {
     host: getInput("network_url"),
     user: getInput("username"),
     password: getInput("api_key"),
   };
 
-  const testrailClient = new TestrailApiClient(testrailOptions);
-  const testrailResults = await readFiles(reportFiles);
+  const testRailClient = new TestRailApiClient(testRailOptions);
+  const testRailResults = await readFiles(reportFiles);
+  let testRailMilestone: IMilestone;
 
-  if (isEmpty(testrailResults)) {
-    setFailed("No Testrail results were found.");
+  if (isEmpty(testRailResults)) {
+    setFailed("No TestRail results were found.");
     return;
   }
 
-  testrailClient
-    .getUserByEmail(testrailOptions.user)
+  if (regressionMode) {
+    testRailMilestone = await getTestRailMilestone(testRailClient, projectId);
+  }
+
+  testRailClient
+    .getUserByEmail(testRailOptions.user)
     .then((userResponse) => {
       const { id: userId } = userResponse.body ?? {};
 
+      const milestoneId = isEmpty(testRailMilestone) ? null : testRailMilestone.id;
       const testRunOptions: INewTestRun = {
         suite_id: suiteId,
         // @ts-ignore because milestone is not required
-        milestone_id: null,
+        milestone_id: milestoneId,
         name: `[${environment}][${moment()
           .tz("America/New_York")
           .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
@@ -85,45 +167,22 @@ async function run(): Promise<void> {
         include_all: true,
         assignedto_id: userId,
       };
+      const testPlanOptions = {
+        milestone_id: milestoneId,
+        name: `[${environment}][${moment()
+          .tz("America/New_York")
+          .format("YYYY-MM-DD h:mm:ss")}] Automated Test Plan`,
+        entries: [testRunOptions]
+      };
 
-      testrailClient
-        .addRun(projectId, testRunOptions)
-        .then((runResponse) => {
-          const { id, untested_count } = runResponse?.body ?? {};
-
-          testrailClient
-            .addResultsForCases(id, testrailResults)
-            .then(() => {
-              if (testrailResults.length < untested_count) {
-                testrailClient.updateRun(id, {
-                  ...testRunOptions,
-                  name: `${testRunOptions.name} [INCOMPLETE]`,
-                });
-              } else {
-                testrailClient.closeRun(id);
-              }
-
-              setOutput("Completion time:", new Date().toTimeString());
-              setOutput("Testrail run name:", testRunOptions.name);
-            })
-            .catch((error: any) => {
-              setFailed(`Failed to add test case results to Testrail: ${extractError(error)}`);
-
-              testrailClient.closeRun(id).catch((error: any) => {
-                setFailed(`Failed to close the Testrail run: ${extractError(error)}`);
-              });
-
-              return;
-            });
-        })
-        .catch((error: any) => {
-          setFailed(`Failed to add a new Testrail run: ${extractError(error)}`);
-
-          return;
-        });
+      if (regressionMode) {
+        createTestPlan(testPlanOptions);
+      } else {
+        createTestRun(testRunOptions);
+      }
     })
     .catch((error: any) => {
-      setFailed(`Failed to get Testrail user: ${extractError(error)}`);
+      setFailed(`Failed to get TestRail user: ${extractError(error)}`);
 
       return;
     });

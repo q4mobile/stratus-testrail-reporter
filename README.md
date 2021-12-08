@@ -10,8 +10,10 @@
 # Stratus TestRail Reporter
 
 This action is designed to provide a test case coverage report through the following:
-- Create a new Test Run in TestRail
-- Upload the results of test suites ran by Jest or Nightwach to TestRail
+- When target branch is not "staging", create a new self-closing Test Run in TestRail
+- When target branch is "staging", create or re-use a Milestone to create a new Test Plan in Testrail
+- Upload the results of test suites ran by Jest or Nightwatch to TestRail
+  - Use the [Stratus Jest Reporter](https://github.com/q4mobile/stratus-jest-reporter) or the [Stratus Nightwatch Reporter](https://github.com/q4mobile/stratus-nightwatch-reporter) to generate results easily!
 
 ## Prerequisites
 
@@ -32,6 +34,10 @@ Where:
 - `status_id` is the result of the Test Case
 
 ## Inputs
+
+##### `target_branch`
+The target GitHub branch (if action is triggered by pull request).
+This is used to determine weather or not the reporter should run in regression mode. Ex: `develop` or `staging`.
 
 ##### `network_url` (**Required**)
 The TestRail account domain name. Ex: `https://<YourProjectURL>.testrail.com`.
@@ -60,6 +66,7 @@ One or more files (multi-line input) to parse and report to TestRail.
 - name: Report to TestRail
   uses: q4mobile/stratus-testrail-reporter@v1
   with:
+    target_branch: ${{ github.base_ref }}
     network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
     username: ${{ secrets.TESTRAIL_USER_EMAIL }}
     api_key: ${{ secrets.TESTRAIL_API_KEY }}

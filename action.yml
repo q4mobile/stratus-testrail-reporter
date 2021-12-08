@@ -2,6 +2,9 @@ name: "Stratus Testrail Reporter"
 description: "Stratus Testrail Reporter"
 author: "Q4Inc"
 inputs:
+  target_branch:
+    required: false
+    description: Used to determine whether or not to leverage milestones to track regression
   network_url:
     required: true
     description: The Testrail account domain name
