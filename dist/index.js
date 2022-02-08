@@ -14,7 +14,7 @@ const core_1 = __nccwpck_require__(2186);
 const fs_1 = __nccwpck_require__(5747);
 const lodash_1 = __nccwpck_require__(250);
 const moment_timezone_1 = __importDefault(__nccwpck_require__(7936));
-const testRail_api_1 = __importDefault(__nccwpck_require__(5621));
+const testrail_api_1 = __importDefault(__nccwpck_require__(5381));
 const environment = process.env.NODE_ENV || "debug";
 async function run() {
     async function readFiles(filePaths) {
@@ -132,7 +132,7 @@ async function run() {
         user: (0, core_1.getInput)("username"),
         password: (0, core_1.getInput)("api_key"),
     };
-    const testRailClient = new testRail_api_1.default(testRailOptions);
+    const testRailClient = new testrail_api_1.default(testRailOptions);
     const testRailResults = await readFiles(reportFiles);
     let testRailMilestone;
     if ((0, lodash_1.isEmpty)(testRailResults)) {
@@ -51553,7 +51553,7 @@ var Buffer = __nccwpck_require__(5118).Buffer;
 var Key = __nccwpck_require__(6814);
 var PrivateKey = __nccwpck_require__(9602);
 var utils = __nccwpck_require__(575);
-var SSHBuffer = __nccwpck_require__(9491);
+var SSHBuffer = __nccwpck_require__(5621);
 var Dhe = __nccwpck_require__(7602);
 
 var supportedAlgos = {
@@ -51850,7 +51850,7 @@ module.exports = {
 };
 
 var assert = __nccwpck_require__(6631);
-var SSHBuffer = __nccwpck_require__(9491);
+var SSHBuffer = __nccwpck_require__(5621);
 var crypto = __nccwpck_require__(6417);
 var Buffer = __nccwpck_require__(5118).Buffer;
 var algs = __nccwpck_require__(6126);
@@ -53636,7 +53636,7 @@ var algs = __nccwpck_require__(6126);
 var utils = __nccwpck_require__(575);
 var Key = __nccwpck_require__(6814);
 var PrivateKey = __nccwpck_require__(9602);
-var SSHBuffer = __nccwpck_require__(9491);
+var SSHBuffer = __nccwpck_require__(5621);
 
 function algToKeyType(alg) {
 	assert.string(alg);
@@ -53807,7 +53807,7 @@ var Key = __nccwpck_require__(6814);
 var PrivateKey = __nccwpck_require__(9602);
 var pem = __nccwpck_require__(4324);
 var rfc4253 = __nccwpck_require__(8688);
-var SSHBuffer = __nccwpck_require__(9491);
+var SSHBuffer = __nccwpck_require__(5621);
 var errors = __nccwpck_require__(7979);
 
 var bcrypt;
@@ -56025,7 +56025,7 @@ var crypto = __nccwpck_require__(6417);
 var errs = __nccwpck_require__(7979);
 var utils = __nccwpck_require__(575);
 var asn1 = __nccwpck_require__(970);
-var SSHBuffer = __nccwpck_require__(9491);
+var SSHBuffer = __nccwpck_require__(5621);
 
 var InvalidAlgorithmError = errs.InvalidAlgorithmError;
 var SignatureParseError = errs.SignatureParseError;
@@ -56332,7 +56332,7 @@ Signature._oldVersionDetect = function (obj) {
 
 /***/ }),
 
-/***/ 9491:
+/***/ 5621:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Copyright 2015 Joyent, Inc.
@@ -56899,7 +56899,7 @@ function opensshCipherInfo(cipher) {
 
 /***/ }),
 
-/***/ 5621:
+/***/ 5381:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 var request = __nccwpck_require__(8699);

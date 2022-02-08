@@ -8,7 +8,7 @@ import {
 import { promises as fs } from "fs";
 import { isEmpty } from "lodash";
 import moment from "moment-timezone";
-import TestRailApiClient, { IMilestone, IMilestoneFilters, INewTestResult, INewTestRun, ITestRun } from "testRail-api";
+import TestRailApiClient, { IMilestone, IMilestoneFilters, INewTestResult, INewTestRun, ITestRun } from "testrail-api";
 
 const environment = process.env.NODE_ENV || "debug";
 
