@@ -110,7 +110,7 @@ async function run(): Promise<void> {
           closeTestRun(runId);
         }
 
-        setOutput("Completion time:", new Date().toTimeString());
+        setOutput("completion_time", new Date().toTimeString());
         setOutput("run_id", runId); // output run_id for future steps
       })
       .catch((error: any) => {
