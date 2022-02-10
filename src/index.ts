@@ -111,6 +111,7 @@ async function run(): Promise<void> {
         }
 
         setOutput("Completion time:", new Date().toTimeString());
+        setOutput("run_id", runId); // output run_id for future steps
       })
       .catch((error: any) => {
         setFailed(`Failed to add test case results to TestRail: ${extractError(error)}`);

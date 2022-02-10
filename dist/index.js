@@ -109,6 +109,7 @@ async function run() {
                 closeTestRun(runId);
             }
             (0, core_1.setOutput)("Completion time:", new Date().toTimeString());
+            (0, core_1.setOutput)("run_id", runId); // output run_id for future steps
         })
             .catch((error) => {
             (0, core_1.setFailed)(`Failed to add test case results to TestRail: ${extractError(error)}`);
