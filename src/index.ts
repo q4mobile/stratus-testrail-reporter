@@ -6,7 +6,7 @@ import {
   error as logError,
 } from "@actions/core";
 import { promises as fs } from "fs";
-import { isEmpty } from "lodash";
+import {isEmpty, result} from "lodash";
 import moment from "moment-timezone";
 import TestRailApiClient, { IMilestone, IMilestoneFilters, INewTestResult, INewTestRun, ITestRun } from "testrail-api";
 
@@ -128,18 +128,28 @@ async function run(): Promise<void> {
     return error.error || error.message?.error || error.message || JSON.stringify(error);
   }
 
-  const regressionMode = getInput("target_branch") === "staging";
-  const reportFiles: string[] = getMultilineInput("report_files");
-  const projectId = parseInt(getInput("project_id"), 10);
-  const suiteId = parseInt(getInput("suite_id"), 10);
+  // const regressionMode = getInput("target_branch") === "staging";
+  // const reportFiles: string[] = getMultilineInput("report_files");
+  // const projectId = parseInt(getInput("project_id"), 10);
+  // const suiteId = parseInt(getInput("suite_id"), 10);
+  // const testRailOptions = {
+  //   host: getInput("network_url"),
+  //   user: getInput("username"),
+  //   password: getInput("api_key"),
+  // };
+
+  const regressionMode = true;
+  const projectId = 26;
+  const suiteId = 12023;
   const testRailOptions = {
-    host: getInput("network_url"),
-    user: getInput("username"),
-    password: getInput("api_key"),
+    host: "https://q4web.testrail.com",
+    user: "app@q4inc.com",
+    password: "o2OXSdr0f3Y4uepqp2Q4-uSwW7DblrHuN3JjvM75P",
   };
 
   const testRailClient = new TestRailApiClient(testRailOptions);
-  const testRailResults = await readFiles(reportFiles);
+  // const testRailResults = await readFiles(reportFiles);
+  const testRailResults = [{"case_id":911297,"status_id":1,"comment":"Test passed successfully."}];
   let testRailMilestone: IMilestone;
 
   if (isEmpty(testRailResults)) {
@@ -147,14 +157,16 @@ async function run(): Promise<void> {
     return;
   }
 
-  if (regressionMode) {
+  // if (regressionMode) {
     testRailMilestone = await getTestRailMilestone(testRailClient, projectId);
-  }
+  // }
 
-  testRailClient
-    .getUserByEmail(testRailOptions.user)
-    .then((userResponse) => {
-      const { id: userId } = userResponse.body ?? {};
+  // testRailClient
+  //   .getUserByEmail(testRailOptions.user)
+  //   .then((userResponse) => {
+  //     const { id: userId } = userResponse.body ?? {};
+
+      const userId = 183;
 
       const milestoneId = isEmpty(testRailMilestone) ? null : testRailMilestone.id;
       const testRunOptions: INewTestRun = {
@@ -181,12 +193,13 @@ async function run(): Promise<void> {
       } else {
         createTestRun(testRunOptions);
       }
-    })
-    .catch((error: any) => {
-      setFailed(`Failed to get TestRail user: ${extractError(error)}`);
-
-      return;
-    });
+    // })
+    // .catch((error: any) => {
+    //   console.log("error", error);
+    //   setFailed(`Failed to get TestRail user: ${extractError(error)}`);
+    //
+    //   return;
+    // });
 }
 
 run();
