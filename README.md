@@ -57,6 +57,9 @@ The suite ID of the TestRail project. Does not include "S" prefix.
 ##### `report_files` (**Required**)
 One or more files (multi-line input) to parse and report to TestRail.
 
+##### `regression_branch` (**Optional**)
+This sets regression branch used to determine weather or not the reporter should run in regression mode. Default: `staging`.
+
 ## Outputs
 
 ##### `run_id`
@@ -75,6 +78,7 @@ A string to represent the time when the TestRail run completed in the action.
   uses: q4mobile/stratus-testrail-reporter@v1
   with:
     target_branch: ${{ github.base_ref }}
+    regression_branch: test ## optional
     network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
     username: ${{ secrets.TESTRAIL_USER_EMAIL }}
     api_key: ${{ secrets.TESTRAIL_API_KEY }}
