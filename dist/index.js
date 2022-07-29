@@ -1,7 +1,7 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9283:
+/***/ 5724:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -10,121 +10,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = exports.InputKey = void 0;
 const core_1 = __nccwpck_require__(2186);
-const fs_1 = __nccwpck_require__(5747);
 const lodash_1 = __nccwpck_require__(250);
 const moment_timezone_1 = __importDefault(__nccwpck_require__(7936));
 const testrail_api_1 = __importDefault(__nccwpck_require__(5381));
+const utils_1 = __nccwpck_require__(4651);
 const environment = process.env.NODE_ENV || "debug";
+var InputKey;
+(function (InputKey) {
+    InputKey["RegressionBranch"] = "regression_branch";
+    InputKey["TargetBranch"] = "target_branch";
+})(InputKey = exports.InputKey || (exports.InputKey = {}));
 async function run() {
-    async function readFiles(filePaths) {
-        return new Promise((resolve) => {
-            let testRailResults = [];
-            const promises = filePaths.map((filePath) => {
-                return fs_1.promises
-                    .readFile(filePath, "utf-8")
-                    .then((fileResults) => {
-                    try {
-                        const results = JSON.parse(fileResults);
-                        testRailResults = testRailResults.concat(results);
-                    }
-                    catch (error) {
-                        (0, core_1.error)(`Parsing report file has failed: ${error.message}`);
-                        resolve([]);
-                    }
-                })
-                    .catch((error) => {
-                    (0, core_1.error)(`Reading report file has failed:: ${error.message}`);
-                    resolve([]);
-                });
-            });
-            Promise.all(promises)
-                .then(() => {
-                resolve(testRailResults);
-            })
-                .catch((error) => {
-                (0, core_1.setFailed)(error.message);
-                resolve([]);
-            });
-        });
-    }
-    async function getTestRailMilestone(testRailClient, projectId) {
-        // @ts-ignore because is_started is not actually required
-        const milestoneFilters = { is_completed: 0 };
-        return new Promise((resolve) => {
-            testRailClient.getMilestones(projectId, milestoneFilters).then((milestonesResponse) => {
-                var _a;
-                // @ts-ignore because getMilestones response is typed incorrectly
-                const { milestones } = (_a = milestonesResponse.body) !== null && _a !== void 0 ? _a : {};
-                if ((0, lodash_1.isEmpty)(milestones)) {
-                    testRailClient.addMilestone(projectId, {
-                        name: `[${(0, moment_timezone_1.default)()
-                            .tz("America/New_York")
-                            .format("YYYY-MM-DD")}] Automated Mile Stone`
-                    }).then((addMilestoneResponse) => {
-                        var _a;
-                        resolve((_a = addMilestoneResponse.body) !== null && _a !== void 0 ? _a : {});
-                    });
-                }
-                else {
-                    resolve(milestones[0]);
-                }
-            });
-        });
-    }
-    function createTestPlan(testPlanOptions) {
-        testRailClient.addPlan(projectId, testPlanOptions).then((addPlanResponse) => {
-            var _a, _b, _c;
-            const { entries } = (_a = addPlanResponse.body) !== null && _a !== void 0 ? _a : {};
-            const { runs } = (_b = (entries || [])[0]) !== null && _b !== void 0 ? _b : {};
-            const { id } = (_c = (runs || [])[0]) !== null && _c !== void 0 ? _c : {};
-            addResults(id);
-        })
-            .catch((error) => {
-            (0, core_1.setFailed)(`Failed to add a new TestRail plan: ${extractError(error)}`);
-        });
-    }
-    function createTestRun(testRunOptions) {
-        testRailClient
-            .addRun(projectId, testRunOptions)
-            .then((addRunResponse) => {
-            var _a;
-            const { id } = (_a = addRunResponse.body) !== null && _a !== void 0 ? _a : {};
-            addResults(id);
-        })
-            .catch((error) => {
-            (0, core_1.setFailed)(`Failed to add a new TestRail run: ${extractError(error)}`);
-        });
-    }
-    function closeTestRun(runId) {
-        testRailClient.closeRun(runId).catch((error) => {
-            (0, core_1.setFailed)(`Failed to close the TestRail run: ${extractError(error)}`);
-        });
-    }
-    function addResults(runId) {
-        testRailClient
-            .addResultsForCases(runId, testRailResults)
-            .then(() => {
-            if (!regressionMode) {
-                closeTestRun(runId);
-            }
-            (0, core_1.setOutput)("completion_time", new Date().toTimeString());
-            (0, core_1.setOutput)("run_id", runId); // output run_id for future steps
-        })
-            .catch((error) => {
-            (0, core_1.setFailed)(`Failed to add test case results to TestRail: ${extractError(error)}`);
-            if (!regressionMode) {
-                closeTestRun(runId);
-            }
-        });
-    }
-    function extractError(error) {
-        var _a;
-        if ((0, lodash_1.isEmpty)(error))
-            return "An error is present, but could not be parsed";
-        return error.error || ((_a = error.message) === null || _a === void 0 ? void 0 : _a.error) || error.message || JSON.stringify(error);
-    }
-    const regressionMode = (0, core_1.getInput)("target_branch") === "staging";
+    const regressionBranch = (0, core_1.getInput)(InputKey.RegressionBranch) || "staging";
+    const regressionMode = (0, core_1.getInput)(InputKey.TargetBranch) === regressionBranch;
     const reportFiles = (0, core_1.getMultilineInput)("report_files");
     const projectId = parseInt((0, core_1.getInput)("project_id"), 10);
     const suiteId = parseInt((0, core_1.getInput)("suite_id"), 10);
@@ -134,14 +34,14 @@ async function run() {
         password: (0, core_1.getInput)("api_key"),
     };
     const testRailClient = new testrail_api_1.default(testRailOptions);
-    const testRailResults = await readFiles(reportFiles);
+    const testRailResults = await (0, utils_1.readFiles)(reportFiles);
     let testRailMilestone;
     if ((0, lodash_1.isEmpty)(testRailResults)) {
         (0, core_1.setFailed)("No TestRail results were found.");
         return;
     }
     if (regressionMode) {
-        testRailMilestone = await getTestRailMilestone(testRailClient, projectId);
+        testRailMilestone = await (0, utils_1.getTestRailMilestone)(testRailClient, projectId);
     }
     testRailClient
         .getUserByEmail(testRailOptions.user)
@@ -168,18 +68,255 @@ async function run() {
             entries: [testRunOptions]
         };
         if (regressionMode) {
-            createTestPlan(testPlanOptions);
+            (0, utils_1.createTestPlan)(testRailClient, projectId, testPlanOptions, testRailResults, true);
         }
         else {
-            createTestRun(testRunOptions);
+            (0, utils_1.createTestRun)(testRailClient, projectId, testRunOptions, testRailResults, false);
         }
     })
         .catch((error) => {
-        (0, core_1.setFailed)(`Failed to get TestRail user: ${extractError(error)}`);
-        return;
+        (0, core_1.setFailed)(`Failed to get TestRail user: ${(0, utils_1.extractError)(error)}`);
     });
 }
-run();
+exports.run = run;
+
+
+/***/ }),
+
+/***/ 4815:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.closeTestRun = void 0;
+const core_1 = __nccwpck_require__(2186);
+const error_1 = __nccwpck_require__(3115);
+function closeTestRun(testRailClient, runId) {
+    testRailClient.closeRun(runId).catch((error) => {
+        (0, core_1.setFailed)(`Failed to close the TestRail run: ${(0, error_1.extractError)(error)}`);
+    });
+}
+exports.closeTestRun = closeTestRun;
+
+
+/***/ }),
+
+/***/ 327:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createTestPlan = void 0;
+const core_1 = __nccwpck_require__(2186);
+const error_1 = __nccwpck_require__(3115);
+const results_1 = __nccwpck_require__(4940);
+function createTestPlan(testRailClient, projectId, testPlanOptions, testRailResults, regressionMode) {
+    testRailClient.addPlan(projectId, testPlanOptions).then((addPlanResponse) => {
+        var _a, _b, _c;
+        const { entries } = (_a = addPlanResponse.body) !== null && _a !== void 0 ? _a : {};
+        const { runs } = (_b = (entries || [])[0]) !== null && _b !== void 0 ? _b : {};
+        const { id } = (_c = (runs || [])[0]) !== null && _c !== void 0 ? _c : {};
+        (0, results_1.addResults)(testRailClient, id, testRailResults, regressionMode);
+    })
+        .catch((error) => {
+        (0, core_1.setFailed)(`Failed to add a new TestRail plan: ${(0, error_1.extractError)(error)}`);
+    });
+}
+exports.createTestPlan = createTestPlan;
+
+
+/***/ }),
+
+/***/ 1795:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createTestRun = void 0;
+const core_1 = __nccwpck_require__(2186);
+const error_1 = __nccwpck_require__(3115);
+const results_1 = __nccwpck_require__(4940);
+function createTestRun(testRailClient, projectId, testRunOptions, testRailResults, regressionMode) {
+    testRailClient
+        .addRun(projectId, testRunOptions)
+        .then((addRunResponse) => {
+        var _a;
+        const { id } = (_a = addRunResponse.body) !== null && _a !== void 0 ? _a : {};
+        (0, results_1.addResults)(testRailClient, id, testRailResults, regressionMode);
+    })
+        .catch((error) => {
+        (0, core_1.setFailed)(`Failed to add a new TestRail run: ${(0, error_1.extractError)(error)}`);
+    });
+}
+exports.createTestRun = createTestRun;
+
+
+/***/ }),
+
+/***/ 3115:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.extractError = void 0;
+const lodash_1 = __nccwpck_require__(250);
+function extractError(error) {
+    var _a;
+    if ((0, lodash_1.isEmpty)(error))
+        return "An error is present, but could not be parsed";
+    return error.error || ((_a = error.message) === null || _a === void 0 ? void 0 : _a.error) || error.message || JSON.stringify(error);
+}
+exports.extractError = extractError;
+
+
+/***/ }),
+
+/***/ 5057:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getTestRailMilestone = void 0;
+const lodash_1 = __nccwpck_require__(250);
+const moment_1 = __importDefault(__nccwpck_require__(9623));
+async function getTestRailMilestone(testRailClient, projectId) {
+    // @ts-ignore because is_started is not actually required
+    const milestoneFilters = { is_completed: 0 };
+    return new Promise((resolve) => {
+        testRailClient.getMilestones(projectId, milestoneFilters).then((milestonesResponse) => {
+            var _a;
+            // @ts-ignore because getMilestones response is typed incorrectly
+            const { milestones } = (_a = milestonesResponse.body) !== null && _a !== void 0 ? _a : {};
+            if ((0, lodash_1.isEmpty)(milestones)) {
+                testRailClient.addMilestone(projectId, {
+                    name: `[${(0, moment_1.default)()
+                        .tz("America/New_York")
+                        .format("YYYY-MM-DD")}] Automated Mile Stone`
+                }).then((addMilestoneResponse) => {
+                    var _a;
+                    resolve((_a = addMilestoneResponse.body) !== null && _a !== void 0 ? _a : {});
+                });
+            }
+            else {
+                resolve(milestones[0]);
+            }
+        });
+    });
+}
+exports.getTestRailMilestone = getTestRailMilestone;
+
+
+/***/ }),
+
+/***/ 4651:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__nccwpck_require__(327), exports);
+__exportStar(__nccwpck_require__(1795), exports);
+__exportStar(__nccwpck_require__(3115), exports);
+__exportStar(__nccwpck_require__(5057), exports);
+__exportStar(__nccwpck_require__(4881), exports);
+
+
+/***/ }),
+
+/***/ 4881:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readFiles = void 0;
+const core_1 = __nccwpck_require__(2186);
+const fs_1 = __nccwpck_require__(5747);
+const lodash_1 = __nccwpck_require__(250);
+async function readFiles(filePaths) {
+    if ((0, lodash_1.isEmpty)(filePaths))
+        return Promise.resolve([]);
+    return new Promise((resolve) => {
+        let testRailResults = [];
+        const promises = filePaths.map((filePath) => {
+            return fs_1.promises
+                .readFile(filePath, "utf-8")
+                .then((fileResults) => {
+                try {
+                    const results = JSON.parse(fileResults);
+                    testRailResults = testRailResults.concat(results);
+                }
+                catch (error) {
+                    (0, core_1.error)(`Parsing report file has failed: ${error.message}`);
+                    resolve([]);
+                }
+            })
+                .catch((error) => {
+                (0, core_1.error)(`Reading report file has failed:: ${error.message}`);
+                resolve([]);
+            });
+        });
+        Promise.all(promises)
+            .then(() => {
+            resolve(testRailResults);
+        })
+            .catch((error) => {
+            (0, core_1.setFailed)(error.message);
+            resolve([]);
+        });
+    });
+}
+exports.readFiles = readFiles;
+
+
+/***/ }),
+
+/***/ 4940:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.addResults = void 0;
+const core_1 = __nccwpck_require__(2186);
+const closeTestRun_1 = __nccwpck_require__(4815);
+const error_1 = __nccwpck_require__(3115);
+function addResults(testRailClient, runId, testRailResults, regressionMode) {
+    testRailClient
+        .addResultsForCases(runId, testRailResults)
+        .then(() => {
+        if (!regressionMode) {
+            (0, closeTestRun_1.closeTestRun)(testRailClient, runId);
+        }
+        (0, core_1.setOutput)("completion_time", new Date().toTimeString());
+        (0, core_1.setOutput)("run_id", runId); // output run_id for future steps
+    })
+        .catch((error) => {
+        (0, core_1.setFailed)(`Failed to add test case results to TestRail: ${(0, error_1.extractError)(error)}`);
+        if (!regressionMode) {
+            (0, closeTestRun_1.closeTestRun)(testRailClient, runId);
+        }
+    });
+}
+exports.addResults = addResults;
 
 
 /***/ }),
@@ -64641,13 +64778,19 @@ module.exports = require("zlib");
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(9283);
-/******/ 	module.exports = __webpack_exports__;
-/******/ 	
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+var exports = __webpack_exports__;
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const run_1 = __nccwpck_require__(5724);
+(0, run_1.run)();
+
+})();
+
+module.exports = __webpack_exports__;
 /******/ })()
 ;
 //# sourceMappingURL=index.js.map
