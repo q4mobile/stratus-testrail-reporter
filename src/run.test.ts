@@ -62,8 +62,10 @@ describe("run", () => {
     expect(getInputSpy).toBeCalledWith(InputKey.TargetBranch);
     if (expected) {
       expect(getTestRailMilestoneSpy).toBeCalled();
+      expect(createTestPlanSpy).toBeCalled();
     } else {
       expect(getTestRailMilestoneSpy).not.toBeCalled();
+      expect(createTestRunSpy).toBeCalled();
     }
   }
   it("[Given] the regression branch is 'test' [And] the target branch is 'test' [Then] expect a call to 'getTestRailMilestoneSpy' to be invoked", async () => {

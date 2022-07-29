@@ -7,7 +7,6 @@ import { isEmpty } from "lodash";
 import moment from "moment-timezone";
 import TestRailApiClient, { IMilestone, INewTestRun } from "testrail-api";
 import { createTestPlan, createTestRun, extractError, getTestRailMilestone, readFiles } from "./utils";
-import {  } from "./utils/createTestRun";
 
 const environment = process.env.NODE_ENV || "debug";
 

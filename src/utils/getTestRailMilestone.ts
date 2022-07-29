@@ -26,4 +26,3 @@ export async function getTestRailMilestone(testRailClient: TestrailApiClient, pr
     });
   });
 }
-  

@@ -78,7 +78,7 @@ A string to represent the time when the TestRail run completed in the action.
   uses: q4mobile/stratus-testrail-reporter@v1
   with:
     target_branch: ${{ github.base_ref }}
-    regression_branch: test ## optional
+    regression_branch: test ## optional (Default: `staging`)
     network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
     username: ${{ secrets.TESTRAIL_USER_EMAIL }}
     api_key: ${{ secrets.TESTRAIL_API_KEY }}
