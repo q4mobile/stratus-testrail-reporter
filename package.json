@@ -1,6 +1,6 @@
 {
   "name": "@q4/stratus-testrail-reporter",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "A custom Github Action that consumes Stratus test reports to create and execute TestRail runs",
   "main": "dist/index.js",
   "engines": {
