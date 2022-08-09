@@ -88,7 +88,7 @@ describe("run", () => {
         expect.anything(),
         mockId,
         expect.objectContaining({
-          name: `${mockName}[test][${moment(date)
+          name: `[${mockName}][test][${moment(date)
             .tz("America/New_York")
             .format("YYYY-MM-DD h:mm:ss")}] Automated Test Plan`,
         }),
@@ -101,7 +101,7 @@ describe("run", () => {
         expect.anything(),
         mockId,
         expect.objectContaining({
-          name: `${mockName}[test][${moment(date)
+          name: `[${mockName}][test][${moment(date)
             .tz("America/New_York")
             .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
         }),
