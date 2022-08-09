@@ -6,8 +6,19 @@ import * as createTestRun from "./utils/createTestRun";
 import * as getTestRailMilestone from "./utils/getTestRailMilestone";
 import * as readFiles from "./utils/readFiles";
 import { Response } from "request";
+import moment from "moment-timezone";
+
+const date = new Date();
+const mockId = 1234567;
+const mockName = "mockName";
+const now = date.getTime();
 
 describe("run", () => {
+  beforeAll(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(date);
+  });
+
   const getInputSpy = jest.spyOn(actions, "getInput");
   const createTestPlanSpy = jest.spyOn(createTestPlan, "createTestPlan");
   const createTestRunSpy = jest.spyOn(createTestRun, "createTestRun");
@@ -23,6 +34,9 @@ describe("run", () => {
           return regression_branch ?? "";
         case InputKey.TargetBranch:
           return target_branch;
+        case InputKey.ProjectId:
+        case InputKey.SuiteId:
+          return mockId.toString();
         default:
           return "";
       }
@@ -30,10 +44,6 @@ describe("run", () => {
   }
 
   beforeEach(() => {
-    const mockId = 1234567;
-    const mockName = "mockName";
-    const now = new Date().getTime();
-
     setInputMock("test", "test");
 
     readFilesSpy.mockResolvedValue([{ status_id: mockId }]);
@@ -74,10 +84,30 @@ describe("run", () => {
     expect(getSuiteSpy).toHaveBeenCalled();
     if (expected) {
       expect(getTestRailMilestoneSpy).toBeCalled();
-      expect(createTestPlanSpy).toBeCalled();
+      expect(createTestPlanSpy).toBeCalledWith(
+        expect.anything(),
+        mockId,
+        expect.objectContaining({
+          name: `${mockName}[test][${moment(date)
+            .tz("America/New_York")
+            .format("YYYY-MM-DD h:mm:ss")}] Automated Test Plan`,
+        }),
+        expect.anything(),
+        true
+      );
     } else {
       expect(getTestRailMilestoneSpy).not.toBeCalled();
-      expect(createTestRunSpy).toBeCalled();
+      expect(createTestRunSpy).toBeCalledWith(
+        expect.anything(),
+        mockId,
+        expect.objectContaining({
+          name: `${mockName}[test][${moment(date)
+            .tz("America/New_York")
+            .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
+        }),
+        expect.anything(),
+        false
+      );
     }
   }
   it("[Given] the regression branch is 'test' [And] the target branch is 'test' [Then] expect a call to 'getTestRailMilestoneSpy' to be invoked", async () => {

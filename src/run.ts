@@ -15,14 +15,16 @@ const environment = process.env.NODE_ENV || "debug";
 export enum InputKey {
   RegressionBranch = "regression_branch",
   TargetBranch = "target_branch",
+  ProjectId = "project_id",
+  SuiteId = "suite_id",
 }
 
 export async function run(): Promise<void> {
   const regressionBranch = getInput(InputKey.RegressionBranch) || "staging";
   const regressionMode = getInput(InputKey.TargetBranch) === regressionBranch;
   const reportFiles: string[] = getMultilineInput("report_files");
-  const projectId = parseInt(getInput("project_id"), 10);
-  const suiteId = parseInt(getInput("suite_id"), 10);
+  const projectId = parseInt(getInput(InputKey.ProjectId), 10);
+  const suiteId = parseInt(getInput(InputKey.SuiteId), 10);
   const testRailOptions = {
     host: getInput("network_url"),
     user: getInput("username"),
