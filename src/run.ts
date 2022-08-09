@@ -41,10 +41,9 @@ export async function run(): Promise<void> {
     testRailMilestone = await getTestRailMilestone(testRailClient, projectId);
   }
 
-  let suiteName: string;
-  await testRailClient.getSuite(suiteId, (_err, _response, suite) => {
-    suiteName = `${suite?.name} ` || "";
-  });
+  const {
+    body: { name: suiteName },
+  } = await testRailClient.getSuite(suiteId);
 
   testRailClient
     .getUserByEmail(testRailOptions.user)
