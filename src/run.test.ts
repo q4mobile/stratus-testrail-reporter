@@ -61,7 +61,7 @@ describe("run", () => {
 
     getSuiteSpy.mockResolvedValue({
       body: {
-        name: "mockSuiteName",
+        name: mockName,
       } as ISuite,
       response: {} as Response,
     });
