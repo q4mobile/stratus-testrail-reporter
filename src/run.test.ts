@@ -1,10 +1,11 @@
 import { InputKey, run } from "./run";
 import * as actions from "@actions/core";
-import TestRailApiClient from "testrail-api";
+import TestRailApiClient, { ISuite } from "testrail-api";
 import * as createTestPlan from "./utils/createTestPlan";
 import * as createTestRun from "./utils/createTestRun";
 import * as getTestRailMilestone from "./utils/getTestRailMilestone";
 import * as readFiles from "./utils/readFiles";
+import { Response } from "request";
 
 describe("run", () => {
   const getInputSpy = jest.spyOn(actions, "getInput");
@@ -13,10 +14,11 @@ describe("run", () => {
   const getTestRailMilestoneSpy = jest.spyOn(getTestRailMilestone, "getTestRailMilestone");
   const readFilesSpy = jest.spyOn(readFiles, "readFiles");
   const testRailApiClientSpy = jest.spyOn(TestRailApiClient.prototype, "getUserByEmail");
-  
+  const getSuiteSpy = jest.spyOn(TestRailApiClient.prototype, "getSuite");
+
   function setInputMock(target_branch: string, regression_branch?: string) {
     getInputSpy.mockImplementation((val): string => {
-      switch(val) {
+      switch (val) {
         case InputKey.RegressionBranch:
           return regression_branch ?? "";
         case InputKey.TargetBranch:
@@ -39,7 +41,9 @@ describe("run", () => {
     createTestRunSpy.mockImplementation();
 
     // @ts-ignore only body is used in the code
-    testRailApiClientSpy.mockResolvedValue({ body: { id: mockId, email: "mockEmail", name: mockName, is_active: true } });
+    testRailApiClientSpy.mockResolvedValue({
+      body: { id: mockId, email: "mockEmail", name: mockName, is_active: true },
+    });
     getTestRailMilestoneSpy.mockResolvedValue({
       completed_on: now,
       description: "mockDescription",
@@ -52,7 +56,14 @@ describe("run", () => {
       project_id: mockId,
       start_on: now,
       started_on: now,
-      url: "mockUrl"
+      url: "mockUrl",
+    });
+
+    getSuiteSpy.mockResolvedValue({
+      body: {
+        name: "mockSuiteName",
+      } as ISuite,
+      response: {} as Response,
     });
   });
 
@@ -60,6 +71,7 @@ describe("run", () => {
   function expectMilestoneToBeCalled(expected = true): void {
     expect(getInputSpy).toBeCalledWith(InputKey.RegressionBranch);
     expect(getInputSpy).toBeCalledWith(InputKey.TargetBranch);
+    expect(getSuiteSpy).toHaveBeenCalled();
     if (expected) {
       expect(getTestRailMilestoneSpy).toBeCalled();
       expect(createTestPlanSpy).toBeCalled();
