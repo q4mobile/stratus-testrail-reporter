@@ -35,9 +35,12 @@ Where:
 
 ## Inputs
 
-##### `target_branch`
+##### `target_branch` (**Optional**)
 The target GitHub branch (if action is triggered by pull request).
 This is used to determine weather or not the reporter should run in regression mode. Ex: `develop` or `staging`.
+
+##### `regression_branch` (**Optional**)
+This sets regression branch used to determine weather or not the reporter should run in regression mode. Default: `staging`.
 
 ##### `network_url` (**Required**)
 The TestRail account domain name. Ex: `https://<YourProjectURL>.testrail.com`.
@@ -56,9 +59,6 @@ The suite ID of the TestRail project. Does not include "S" prefix.
 
 ##### `report_files` (**Required**)
 One or more files (multi-line input) to parse and report to TestRail.
-
-##### `regression_branch` (**Optional**)
-This sets regression branch used to determine weather or not the reporter should run in regression mode. Default: `staging`.
 
 ## Outputs
 
