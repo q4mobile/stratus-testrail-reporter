@@ -5,9 +5,9 @@ inputs:
   target_branch:
     required: false
     description: Used to determine whether or not to leverage milestones to track regression
-  regression_branch_branch:
+  regression_branch:
     required: false
-    description: Used to determine whether or not to leverage milestones to track regression
+    description: Used to set a custom regression branch name leveraged in the calculation against target_branch
   network_url:
     required: true
     description: The Testrail account domain name
