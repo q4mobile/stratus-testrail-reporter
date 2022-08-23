@@ -14,7 +14,7 @@
     "all": "npm run test:build && npm run build && npm run package"
   },
   "dependencies": {
-    "@actions/core": "^1.6.x",
+    "@actions/core": "^1.9.x",
     "@actions/github": "^5.0.x",
     "lodash": "^4.17.x",
     "moment-timezone": "^0.5.x",
