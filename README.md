@@ -35,12 +35,11 @@ Where:
 
 ## Inputs
 
-##### `target_branch` (**Optional**)
-The target GitHub branch (if action is triggered by pull request).
-This is used to determine weather or not the reporter should run in regression mode. Ex: `develop` or `staging`.
+##### `jira_key` (**Optional**)
+Used in trunk-based development flow. This key is used to synchronize milestones and test runs with the feature. Ex: `JAV-13`
 
-##### `regression_branch` (**Optional**)
-This sets regression branch used to determine weather or not the reporter should run in regression mode. Default: `staging`.
+##### `regression_mode` (**Optional**)
+Used in git development flow. This will determine whether to leverage milestones to track regression.
 
 ##### `network_url` (**Required**)
 The TestRail account domain name. Ex: `https://<YourProjectURL>.testrail.com`.
@@ -57,9 +56,6 @@ The project ID of the TestRail project.
 ##### `suite_id` (**Required**)
 The suite ID of the TestRail project. Does not include "S" prefix.
 
-##### `report_files` (**Required**)
-One or more files (multi-line input) to parse and report to TestRail.
-
 ## Outputs
 
 ##### `run_id`
@@ -70,6 +66,8 @@ A string to represent the time when the TestRail run completed in the action.
 
 ## Example usage
 
+#### Git Flow
+
 ```yml
 - name: Prepare Test Results File for TestRail
   run: npm run test
@@ -77,17 +75,36 @@ A string to represent the time when the TestRail run completed in the action.
 - name: Report to TestRail
   uses: q4mobile/stratus-testrail-reporter@v1
   with:
-    target_branch: ${{ github.base_ref }}
-    regression_branch: test ## optional (Default: `staging`)
+    regression_mode: true
     network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
     username: ${{ secrets.TESTRAIL_USER_EMAIL }}
     api_key: ${{ secrets.TESTRAIL_API_KEY }}
     project_id: 26
     suite_id: 11417
-    report_files: |
-      client-testrail-report.json
-      backend-testrail-report.json
 ```
+
+Ensure that file(s) are available to parse. The reporter will inspect the file system using this Regex pattern:
+`.*-?testrail-report.json`
+
+#### Trunk Flow
+
+```yml
+- name: Prepare Test Results File for TestRail
+  run: npm run test
+
+- name: Report to TestRail
+  uses: q4mobile/stratus-testrail-reporter@v1
+  with:
+    jira_key: "JAV-13"
+    network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
+    username: ${{ secrets.TESTRAIL_USER_EMAIL }}
+    api_key: ${{ secrets.TESTRAIL_API_KEY }}
+    project_id: 26
+    suite_id: 11417
+```
+
+Ensure that file(s) are available to parse. The reporter will inspect the file system using this pattern:
+`testrail-${projectId}-${suiteId}-report.json`
 
 ## Development
 
