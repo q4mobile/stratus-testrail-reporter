@@ -3,3 +3,10 @@ lib
 node_modules
 .idea
 /.idea/
+
+testrail-26-29542-results.json
+testrail-26-29930-report.json
+testrail-report.json
+jest-testrail-report.json
+nightwatch-testrail-report.json
+dist/*.json

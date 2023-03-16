@@ -2,12 +2,12 @@ name: "Stratus Testrail Reporter"
 description: "Stratus Testrail Reporter"
 author: "Q4Inc"
 inputs:
-  target_branch:
+  jira_key:
     required: false
-    description: Used to determine whether or not to leverage milestones to track regression
-  regression_branch:
+    description: Used in trunk-based development flow. This key is used to synchronize milestones and test runs with the feature.
+  regression_mode:
     required: false
-    description: Used to set a custom regression branch name leveraged in the calculation against target_branch
+    description: Used in git development flow. This will determine whether or not to leverage milestones to track regression
   network_url:
     required: true
     description: The Testrail account domain name
@@ -23,11 +23,6 @@ inputs:
   suite_id:
     required: true
     description: The suite ID of the Testrail project
-  report_files:
-    required: true
-    description: Path to coverage summary
-    default:
-      ./testrail-report-1.json
 runs:
   using: "node16"
   main: "dist/index.js"
