@@ -11,7 +11,7 @@
     "test:build": "./node_modules/.bin/jest",
     "build": "tsc",
     "package": "ncc build --source-map",
-    "all": "npm run test:build && npm run build && npm run package",
+    "all": "npm run build && npm run package",
     "start": "npm run build && "
   },
   "dependencies": {

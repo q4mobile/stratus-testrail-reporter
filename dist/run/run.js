@@ -13,28 +13,16 @@ const run_utils_1 = require("./run.utils");
 const services_1 = require("../services");
 const environment = process.env.NODE_ENV || "debug";
 async function run() {
-    // const jiraKey = getInput(InputKey.JiraKey);
-    // const trunkMode = !!jiraKey;
-    // const regressionMode = getInput(InputKey.RegressionMode);
-    // const projectId = parseInt(getInput(InputKey.ProjectId), 10);
-    // const suiteId = parseInt(getInput(InputKey.SuiteId), 10);
-    // const testRailOptions = {
-    //   host: getInput(InputKey.NetworkUrl),
-    //   user: getInput(InputKey.Username),
-    //   password: getInput(InputKey.ApiKey),
-    // };
     var _a;
-    const jiraKey = undefined;
-    // const jiraKey = "JAV-13";
+    const jiraKey = (0, core_1.getInput)(run_definition_1.InputKey.JiraKey);
     const trunkMode = !!jiraKey;
-    const regressionMode = true;
-    const projectId = 26;
-    const suiteId = 29930; // E2E
-    // const suiteId = 29542; // MFE
+    const regressionMode = (0, core_1.getBooleanInput)(run_definition_1.InputKey.RegressionMode);
+    const projectId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.ProjectId), 10);
+    const suiteId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.SuiteId), 10);
     const testRailOptions = {
-        host: process.env.NETWORK_URL,
-        user: process.env.USERNAME,
-        password: process.env.API_KEY,
+        host: (0, core_1.getInput)(run_definition_1.InputKey.NetworkUrl),
+        user: (0, core_1.getInput)(run_definition_1.InputKey.Username),
+        password: (0, core_1.getInput)(run_definition_1.InputKey.ApiKey),
     };
     const runOptions = {
         jiraKey,
@@ -70,9 +58,7 @@ async function run() {
                     .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
             include_all: true,
         };
-        console.log("milestone", milestone);
         const testRun = await testrailService.establishTestRun(testRunOptions, results);
-        console.log("testRun", testRun);
         if ((0, lodash_1.isEmpty)(testRun)) {
             (0, core_1.setFailed)("A TestRail Run could not be established.");
             return;

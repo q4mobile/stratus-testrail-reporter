@@ -55,7 +55,6 @@ class TestrailService {
             // @ts-ignore because the types for body are incorrect
             const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
             const noTestRuns = (0, lodash_1.isEmpty)(testRuns);
-            console.log("testRuns", testRuns);
             if (noTestRuns) {
                 const { body: testRun } = await this.createTestRun({
                     ...testRunOptions,
@@ -132,10 +131,6 @@ class TestrailService {
     }
     async createTestRun(testRunOptions) {
         return this.testRailClient.addRun(this.runInputs.projectId, testRunOptions);
-    }
-    async updateTestRun(testRun) {
-        // @ts-ignore because the type is incorrect here
-        return this.testRailClient.updateRun(testRun === null || testRun === void 0 ? void 0 : testRun.id, testRun);
     }
     async closeTestRun(runId) {
         return this.testRailClient.closeRun(runId);
