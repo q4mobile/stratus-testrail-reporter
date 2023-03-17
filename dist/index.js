@@ -1,7 +1,37 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 5724:
+/***/ 6937:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InputKey = exports.Environment = void 0;
+var Environment;
+(function (Environment) {
+    Environment["Local"] = "local";
+    Environment["Debug"] = "debug";
+    Environment["Development"] = "dev";
+    Environment["Stage"] = "stage";
+    Environment["Production"] = "prod";
+})(Environment = exports.Environment || (exports.Environment = {}));
+var InputKey;
+(function (InputKey) {
+    InputKey["NetworkUrl"] = "network_url";
+    InputKey["Username"] = "username";
+    InputKey["ApiKey"] = "api_key";
+    InputKey["JiraKey"] = "jira_key";
+    InputKey["RegressionMode"] = "regression_mode";
+    InputKey["TargetBranch"] = "target_branch";
+    InputKey["ProjectId"] = "project_id";
+    InputKey["SuiteId"] = "suite_id";
+})(InputKey = exports.InputKey || (exports.InputKey = {}));
+
+
+/***/ }),
+
+/***/ 5843:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -10,156 +40,340 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = exports.InputKey = void 0;
+exports.run = void 0;
 const core_1 = __nccwpck_require__(2186);
 const lodash_1 = __nccwpck_require__(250);
 const moment_timezone_1 = __importDefault(__nccwpck_require__(7936));
-const testrail_api_1 = __importDefault(__nccwpck_require__(5381));
 const utils_1 = __nccwpck_require__(4651);
+const run_definition_1 = __nccwpck_require__(6937);
+const run_utils_1 = __nccwpck_require__(4727);
+const services_1 = __nccwpck_require__(2749);
 const environment = process.env.NODE_ENV || "debug";
-var InputKey;
-(function (InputKey) {
-    InputKey["RegressionBranch"] = "regression_branch";
-    InputKey["TargetBranch"] = "target_branch";
-    InputKey["ProjectId"] = "project_id";
-    InputKey["SuiteId"] = "suite_id";
-})(InputKey = exports.InputKey || (exports.InputKey = {}));
 async function run() {
-    const regressionBranch = (0, core_1.getInput)(InputKey.RegressionBranch) || "staging";
-    const regressionMode = (0, core_1.getInput)(InputKey.TargetBranch) === regressionBranch;
-    const reportFiles = (0, core_1.getMultilineInput)("report_files");
-    const projectId = parseInt((0, core_1.getInput)(InputKey.ProjectId), 10);
-    const suiteId = parseInt((0, core_1.getInput)(InputKey.SuiteId), 10);
+    var _a;
+    const jiraKey = (0, core_1.getInput)(run_definition_1.InputKey.JiraKey);
+    const trunkMode = !!jiraKey;
+    const regressionMode = (0, core_1.getBooleanInput)(run_definition_1.InputKey.RegressionMode);
+    const projectId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.ProjectId), 10);
+    const suiteId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.SuiteId), 10);
     const testRailOptions = {
-        host: (0, core_1.getInput)("network_url"),
-        user: (0, core_1.getInput)("username"),
-        password: (0, core_1.getInput)("api_key"),
+        host: (0, core_1.getInput)(run_definition_1.InputKey.NetworkUrl),
+        user: (0, core_1.getInput)(run_definition_1.InputKey.Username),
+        password: (0, core_1.getInput)(run_definition_1.InputKey.ApiKey),
     };
-    const testRailClient = new testrail_api_1.default(testRailOptions);
-    const testRailResults = await (0, utils_1.readFiles)(reportFiles);
-    let testRailMilestone;
-    if ((0, lodash_1.isEmpty)(testRailResults)) {
-        (0, core_1.setFailed)("No TestRail results were found.");
-        return;
-    }
-    if (regressionMode) {
-        testRailMilestone = await (0, utils_1.getTestRailMilestone)(testRailClient, projectId);
-    }
-    const { body: { name: suiteName }, } = await testRailClient.getSuite(suiteId);
-    testRailClient
-        .getUserByEmail(testRailOptions.user)
-        .then((userResponse) => {
-        var _a;
-        const { id: userId } = (_a = userResponse.body) !== null && _a !== void 0 ? _a : {};
-        const milestoneId = (0, lodash_1.isEmpty)(testRailMilestone) ? null : testRailMilestone.id;
+    const runOptions = {
+        jiraKey,
+        trunkMode,
+        regressionMode,
+        projectId,
+        suiteId,
+    };
+    const testrailService = new services_1.TestrailService(testRailOptions, runOptions);
+    try {
+        const results = trunkMode
+            ? await (0, run_utils_1.extractTestResults)(projectId, suiteId)
+            : await (0, run_utils_1.extractTestResults)();
+        if ((0, lodash_1.isEmpty)(results)) {
+            (0, core_1.setFailed)("No results for reporting to TestRail were found.");
+            return;
+        }
+        const { body: suite } = await testrailService.getTestSuite();
+        if ((0, lodash_1.isEmpty)(suite)) {
+            (0, core_1.setFailed)("A TestRail Suite could not be found for the provided suite id.");
+            return;
+        }
+        const milestone = await testrailService.establishMilestone();
+        // @ts-ignore because the type for INewTestRun is incorrect
         const testRunOptions = {
             suite_id: suiteId,
-            // @ts-ignore because milestone is not required
-            milestone_id: milestoneId,
-            name: `[${suiteName}][${environment}][${(0, moment_timezone_1.default)()
-                .tz("America/New_York")
-                .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
-            description: "This test run was automatically generated by Github Actions.",
+            // @ts-ignore because milestone_id is not required
+            milestone_id: trunkMode || regressionMode ? milestone === null || milestone === void 0 ? void 0 : milestone.id : null,
+            name: trunkMode
+                ? suite === null || suite === void 0 ? void 0 : suite.name
+                : `[${environment}][${suite === null || suite === void 0 ? void 0 : suite.name}][${(0, moment_timezone_1.default)()
+                    .tz("America/New_York")
+                    .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
             include_all: true,
-            assignedto_id: userId,
         };
-        const testPlanOptions = {
-            milestone_id: milestoneId,
-            name: `[${suiteName}][${environment}][${(0, moment_timezone_1.default)()
-                .tz("America/New_York")
-                .format("YYYY-MM-DD h:mm:ss")}] Automated Test Plan`,
-            entries: [testRunOptions],
-        };
-        if (regressionMode) {
-            (0, utils_1.createTestPlan)(testRailClient, projectId, testPlanOptions, testRailResults, true);
+        const testRun = await testrailService.establishTestRun(testRunOptions, results);
+        if ((0, lodash_1.isEmpty)(testRun)) {
+            (0, core_1.setFailed)("A TestRail Run could not be established.");
+            return;
         }
-        else {
-            (0, utils_1.createTestRun)(testRailClient, projectId, testRunOptions, testRailResults, false);
+        await testrailService.addTestRunResults(testRun.id, results);
+        if ((trunkMode && testRun.untested_count === 0) || (!trunkMode && !regressionMode)) {
+            await testrailService.closeTestRun(testRun.id);
         }
-    })
-        .catch((error) => {
-        (0, core_1.setFailed)(`Failed to get TestRail user: ${(0, utils_1.extractError)(error)}`);
-    });
+        if (trunkMode) {
+            await testrailService.sweepUpTestRuns(milestone === null || milestone === void 0 ? void 0 : milestone.id);
+        }
+        if (environment === run_definition_1.Environment.Production && ((_a = suite === null || suite === void 0 ? void 0 : suite.name) === null || _a === void 0 ? void 0 : _a.includes("E2E"))) {
+            await testrailService.closeMilestone(milestone === null || milestone === void 0 ? void 0 : milestone.id);
+        }
+        (0, core_1.setOutput)("completion_time", new Date().toTimeString());
+        (0, core_1.setOutput)("run_id", testRun.id); // output run_id for future steps
+    }
+    catch (error) {
+        (0, core_1.setFailed)(`Stratus TestRail Reporter encountered an issue: ${(0, utils_1.extractError)(error)}`);
+    }
 }
 exports.run = run;
 
 
 /***/ }),
 
-/***/ 4815:
+/***/ 4727:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.closeTestRun = void 0;
+exports.extractTestResults = void 0;
 const core_1 = __nccwpck_require__(2186);
-const error_1 = __nccwpck_require__(3115);
-function closeTestRun(testRailClient, runId) {
-    testRailClient.closeRun(runId).catch((error) => {
-        (0, core_1.setFailed)(`Failed to close the TestRail run: ${(0, error_1.extractError)(error)}`);
+const fs_1 = __nccwpck_require__(7147);
+const lodash_1 = __nccwpck_require__(250);
+function extractFilePaths(localFilePaths, projectId, suiteId) {
+    const filePaths = [];
+    if ((0, lodash_1.isEmpty)(localFilePaths))
+        return filePaths;
+    const gitPattern = new RegExp(".*-?testrail-report.json");
+    const trunkPattern = projectId && suiteId && `testrail-${projectId}-${suiteId}-report.json`;
+    localFilePaths.forEach((localFilePath) => {
+        if (trunkPattern) {
+            localFilePath === trunkPattern && filePaths.push(localFilePath);
+        }
+        else {
+            gitPattern.test(localFilePath) && filePaths.push(localFilePath);
+        }
+    });
+    return filePaths;
+}
+async function extractTestResults(projectId, suiteId) {
+    return new Promise((resolve) => {
+        let testRailResults = [];
+        fs_1.promises.readdir("./")
+            .then((localFilePaths) => {
+            const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
+            if ((0, lodash_1.isEmpty)(filePaths))
+                return Promise.resolve([]);
+            const promises = filePaths.map((filePath) => {
+                return fs_1.promises
+                    .readFile(filePath, "utf-8")
+                    .then((fileResults) => {
+                    try {
+                        const results = JSON.parse(fileResults);
+                        testRailResults = testRailResults.concat(results);
+                    }
+                    catch (error) {
+                        (0, core_1.error)(`Parsing report file has failed: ${error.message}`);
+                        resolve([]);
+                    }
+                })
+                    .catch((error) => {
+                    (0, core_1.error)(`Reading report file has failed:: ${error.message}`);
+                    resolve([]);
+                });
+            });
+            Promise.all(promises)
+                .then(() => {
+                resolve(testRailResults);
+            })
+                .catch((error) => {
+                (0, core_1.setFailed)(error.message);
+                resolve([]);
+            });
+        })
+            .catch((error) => {
+            (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
+            return Promise.resolve([]);
+        });
     });
 }
-exports.closeTestRun = closeTestRun;
+exports.extractTestResults = extractTestResults;
 
 
 /***/ }),
 
-/***/ 327:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ 2749:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createTestPlan = void 0;
-const core_1 = __nccwpck_require__(2186);
-const error_1 = __nccwpck_require__(3115);
-const results_1 = __nccwpck_require__(4940);
-function createTestPlan(testRailClient, projectId, testPlanOptions, testRailResults, regressionMode) {
-    testRailClient.addPlan(projectId, testPlanOptions).then((addPlanResponse) => {
-        var _a, _b, _c;
-        const { entries } = (_a = addPlanResponse.body) !== null && _a !== void 0 ? _a : {};
-        const { runs } = (_b = (entries || [])[0]) !== null && _b !== void 0 ? _b : {};
-        const { id } = (_c = (runs || [])[0]) !== null && _c !== void 0 ? _c : {};
-        (0, results_1.addResults)(testRailClient, id, testRailResults, regressionMode);
-    })
-        .catch((error) => {
-        (0, core_1.setFailed)(`Failed to add a new TestRail plan: ${(0, error_1.extractError)(error)}`);
-    });
-}
-exports.createTestPlan = createTestPlan;
+exports.TestrailService = void 0;
+const testrail_service_1 = __importDefault(__nccwpck_require__(4231));
+exports.TestrailService = testrail_service_1.default;
 
 
 /***/ }),
 
-/***/ 1795:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ 4231:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createTestRun = void 0;
-const core_1 = __nccwpck_require__(2186);
-const error_1 = __nccwpck_require__(3115);
-const results_1 = __nccwpck_require__(4940);
-function createTestRun(testRailClient, projectId, testRunOptions, testRailResults, regressionMode) {
-    testRailClient
-        .addRun(projectId, testRunOptions)
-        .then((addRunResponse) => {
+const lodash_1 = __nccwpck_require__(250);
+const testrail_api_1 = __importDefault(__nccwpck_require__(5381));
+class TestrailService {
+    constructor(testRailOptions, runInputs) {
+        this.testRailClient = new testrail_api_1.default(testRailOptions);
+        this.runInputs = runInputs;
+    }
+    async establishMilestone() {
+        var _a, _b, _c, _d;
+        const { body: milestonesResponse } = await this.getMilestones();
+        // @ts-ignore because the types for body are not correct
+        const milestones = (_a = milestonesResponse === null || milestonesResponse === void 0 ? void 0 : milestonesResponse.milestones) !== null && _a !== void 0 ? _a : [];
+        let milestone;
+        if (this.runInputs.trunkMode) {
+            // if we're in trunk mode, we want a milestone per JIRA key, so if we can't find it, we make it
+            milestone = (_c = (_b = milestones === null || milestones === void 0 ? void 0 : milestones.filter) === null || _b === void 0 ? void 0 : _b.call(milestones, (currentMilestone) => {
+                var _a, _b;
+                // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
+                return (_b = (_a = currentMilestone === null || currentMilestone === void 0 ? void 0 : currentMilestone.refs) === null || _a === void 0 ? void 0 : _a.includes) === null || _b === void 0 ? void 0 : _b.call(_a, this.runInputs.jiraKey);
+            })) === null || _c === void 0 ? void 0 : _c[0];
+        }
+        else {
+            // if we're in git mode, we simply want to grab the latest milestone
+            // if we're in regression mode, we'll also create a new milestone if one is not found
+            milestone = milestones === null || milestones === void 0 ? void 0 : milestones[0];
+        }
+        if (milestone) {
+            return Promise.resolve(milestone);
+        }
+        if (this.runInputs.trunkMode || this.runInputs.regressionMode) {
+            const { body: newMilestone } = await this.createMilestone({
+                name: `[${(_d = this.runInputs.jiraKey) !== null && _d !== void 0 ? _d : "Automated"}] Release Milestone`,
+                // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
+                refs: this.runInputs.jiraKey,
+            });
+            milestone = newMilestone;
+        }
+        return Promise.resolve(milestone);
+    }
+    async establishTestRun(testRunOptions, results) {
         var _a;
-        const { id } = (_a = addRunResponse.body) !== null && _a !== void 0 ? _a : {};
-        (0, results_1.addResults)(testRailClient, id, testRailResults, regressionMode);
-    })
-        .catch((error) => {
-        (0, core_1.setFailed)(`Failed to add a new TestRail run: ${(0, error_1.extractError)(error)}`);
-    });
+        if (this.runInputs.trunkMode) {
+            // if we're in trunk mode, we want to make sure that a run is attached to the milestone for this suite
+            // and if one is found for this suite and jira key, we simply return it
+            const testRunFilters = {
+                milestone_id: testRunOptions.milestone_id,
+                suite_id: this.runInputs.suiteId,
+            };
+            const { body: testRunsResponse } = await this.getTestRuns(testRunFilters);
+            // @ts-ignore because the types for body are incorrect
+            const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
+            const noTestRuns = (0, lodash_1.isEmpty)(testRuns);
+            if (noTestRuns) {
+                const { body: testRun } = await this.createTestRun({
+                    ...testRunOptions,
+                    // @ts-ignore because the type for INewMilestone is missing refs
+                    refs: this.runInputs.jiraKey,
+                });
+                return Promise.resolve(testRun);
+            }
+            // if a test run is to be returned, we need to reset the results
+            const testRun = testRuns === null || testRuns === void 0 ? void 0 : testRuns[0];
+            await this.addTestRunResults(testRun === null || testRun === void 0 ? void 0 : testRun.id, results.map((currentResult) => ({
+                ...currentResult,
+                status_id: 4,
+                comment: "Test result has been reset",
+            })));
+            return Promise.resolve(testRun);
+        }
+        else {
+            // if we're in git mode, we simply want to create a new test run
+            const { body: testRun } = await this.createTestRun(testRunOptions);
+            return Promise.resolve(testRun);
+        }
+    }
+    async sweepUpTestRuns(milestone_id) {
+        var _a;
+        if (!milestone_id)
+            return Promise.reject();
+        // find test runs for this jira key that might be loose (exploratory testing) and sweep then up
+        const { body: testRunsResponse } = await this.getTestRuns();
+        // @ts-ignore because the types for body are incorrect
+        const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
+        const noTestRuns = (0, lodash_1.isEmpty)(testRuns);
+        if (noTestRuns)
+            return Promise.resolve();
+        await this.attachTestRunsToMilestone(testRuns.filter((currentTestRun) => (currentTestRun === null || currentTestRun === void 0 ? void 0 : currentTestRun.milestone_id) === null), milestone_id).catch((error) => Promise.reject(error));
+        return Promise.resolve();
+    }
+    async addTestRunResults(runId, testRailResults) {
+        return this.testRailClient.addResultsForCases(runId, testRailResults);
+    }
+    async attachTestRunsToMilestone(runs, milestone_id) {
+        return new Promise((resolve, reject) => {
+            if (!(runs === null || runs === void 0 ? void 0 : runs.length))
+                resolve([]);
+            const promises = runs.map((run) => {
+                const { suite_id, name, description, assignedto_id, include_all } = run;
+                // @ts-ignore because the type for payload is incorrect
+                return this.testRailClient.updateRun(run.id, {
+                    ...run,
+                    suite_id,
+                    name,
+                    description,
+                    assignedto_id,
+                    include_all,
+                    milestone_id,
+                });
+            });
+            Promise.all(promises)
+                .then(() => {
+                resolve(runs);
+            })
+                .catch((error) => {
+                reject(error);
+            });
+        });
+    }
+    async getCases(filters) {
+        const caseFilters = { suite_id: this.runInputs.suiteId, limit: 10000, ...filters };
+        return this.testRailClient.getCases(this.runInputs.projectId, caseFilters);
+    }
+    async getTestRuns(filters) {
+        const testRunFilters = { refs: this.runInputs.jiraKey, is_completed: 0, ...filters };
+        return this.testRailClient.getRuns(this.runInputs.projectId, testRunFilters);
+    }
+    async createTestRun(testRunOptions) {
+        return this.testRailClient.addRun(this.runInputs.projectId, testRunOptions);
+    }
+    async closeTestRun(runId) {
+        return this.testRailClient.closeRun(runId);
+    }
+    async getTestSuite() {
+        return this.testRailClient.getSuite(this.runInputs.suiteId);
+    }
+    async getMilestones() {
+        // @ts-ignore because getMilestones response is typed incorrectly
+        const milestoneFilters = { is_completed: 0 };
+        return this.testRailClient.getMilestones(this.runInputs.projectId, milestoneFilters);
+    }
+    async createMilestone(milestoneOptions) {
+        return this.testRailClient.addMilestone(this.runInputs.projectId, milestoneOptions);
+    }
+    async closeMilestone(milestone_id) {
+        return this.testRailClient.updateMilestone(milestone_id, {
+            is_completed: 1,
+        });
+    }
 }
-exports.createTestRun = createTestRun;
+exports["default"] = TestrailService;
 
 
 /***/ }),
 
-/***/ 3115:
+/***/ 7172:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -174,47 +388,6 @@ function extractError(error) {
     return error.error || ((_a = error.message) === null || _a === void 0 ? void 0 : _a.error) || error.message || JSON.stringify(error);
 }
 exports.extractError = extractError;
-
-
-/***/ }),
-
-/***/ 5057:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getTestRailMilestone = void 0;
-const lodash_1 = __nccwpck_require__(250);
-const moment_1 = __importDefault(__nccwpck_require__(9623));
-async function getTestRailMilestone(testRailClient, projectId) {
-    // @ts-ignore because is_started is not actually required
-    const milestoneFilters = { is_completed: 0 };
-    return new Promise((resolve) => {
-        testRailClient.getMilestones(projectId, milestoneFilters).then((milestonesResponse) => {
-            var _a;
-            // @ts-ignore because getMilestones response is typed incorrectly
-            const { milestones } = (_a = milestonesResponse.body) !== null && _a !== void 0 ? _a : {};
-            if ((0, lodash_1.isEmpty)(milestones)) {
-                testRailClient.addMilestone(projectId, {
-                    name: `[${(0, moment_1.default)()
-                        .tz("America/New_York")
-                        .format("YYYY-MM-DD")}] Automated Mile Stone`
-                }).then((addMilestoneResponse) => {
-                    var _a;
-                    resolve((_a = addMilestoneResponse.body) !== null && _a !== void 0 ? _a : {});
-                });
-            }
-            else {
-                resolve(milestones[0]);
-            }
-        });
-    });
-}
-exports.getTestRailMilestone = getTestRailMilestone;
 
 
 /***/ }),
@@ -239,91 +412,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__nccwpck_require__(327), exports);
-__exportStar(__nccwpck_require__(1795), exports);
-__exportStar(__nccwpck_require__(3115), exports);
-__exportStar(__nccwpck_require__(5057), exports);
-__exportStar(__nccwpck_require__(4881), exports);
-
-
-/***/ }),
-
-/***/ 4881:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.readFiles = void 0;
-const core_1 = __nccwpck_require__(2186);
-const fs_1 = __nccwpck_require__(7147);
-const lodash_1 = __nccwpck_require__(250);
-async function readFiles(filePaths) {
-    if ((0, lodash_1.isEmpty)(filePaths))
-        return Promise.resolve([]);
-    return new Promise((resolve) => {
-        let testRailResults = [];
-        const promises = filePaths.map((filePath) => {
-            return fs_1.promises
-                .readFile(filePath, "utf-8")
-                .then((fileResults) => {
-                try {
-                    const results = JSON.parse(fileResults);
-                    testRailResults = testRailResults.concat(results);
-                }
-                catch (error) {
-                    (0, core_1.error)(`Parsing report file has failed: ${error.message}`);
-                    resolve([]);
-                }
-            })
-                .catch((error) => {
-                (0, core_1.error)(`Reading report file has failed:: ${error.message}`);
-                resolve([]);
-            });
-        });
-        Promise.all(promises)
-            .then(() => {
-            resolve(testRailResults);
-        })
-            .catch((error) => {
-            (0, core_1.setFailed)(error.message);
-            resolve([]);
-        });
-    });
-}
-exports.readFiles = readFiles;
-
-
-/***/ }),
-
-/***/ 4940:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.addResults = void 0;
-const core_1 = __nccwpck_require__(2186);
-const closeTestRun_1 = __nccwpck_require__(4815);
-const error_1 = __nccwpck_require__(3115);
-function addResults(testRailClient, runId, testRailResults, regressionMode) {
-    testRailClient
-        .addResultsForCases(runId, testRailResults)
-        .then(() => {
-        if (!regressionMode) {
-            (0, closeTestRun_1.closeTestRun)(testRailClient, runId);
-        }
-        (0, core_1.setOutput)("completion_time", new Date().toTimeString());
-        (0, core_1.setOutput)("run_id", runId); // output run_id for future steps
-    })
-        .catch((error) => {
-        (0, core_1.setFailed)(`Failed to add test case results to TestRail: ${(0, error_1.extractError)(error)}`);
-        if (!regressionMode) {
-            (0, closeTestRun_1.closeTestRun)(testRailClient, runId);
-        }
-    });
-}
-exports.addResults = addResults;
+__exportStar(__nccwpck_require__(7172), exports);
 
 
 /***/ }),
@@ -66042,7 +66131,7 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const run_1 = __nccwpck_require__(5724);
+const run_1 = __nccwpck_require__(5843);
 (0, run_1.run)();
 
 })();
