@@ -40,7 +40,7 @@ runs:
         regex: '(?<=(feat|fix|docs|style|refactor|perf|test|chore)\()[^)]+(?=\))'
         flags: gm
 
-    - uses: '${{ github.action_path }}/main'
+    - uses: ${{github.action_path}}
       id: report
       env:
         NODE_ENV: ${{ env.node_env }}
