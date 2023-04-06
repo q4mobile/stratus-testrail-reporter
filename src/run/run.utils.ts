@@ -1,34 +1,53 @@
-import { setFailed, error as logError } from "@actions/core";
+import {setFailed, error as logError, getInput} from "@actions/core";
 import { promises as fs } from "fs";
 import { isEmpty } from "lodash";
 import type { INewTestResult } from "testrail-api";
-
-function extractFilePaths(
+import type { TestRun } from "./run.definition";
+export function extractFilePaths(
   localFilePaths: string[],
-  projectId?: number,
-  suiteId?: number
+  projectIdPattern?: string,
+  suiteIdPattern?: string
 ): string[] {
   const filePaths: string[] = [];
 
   if (isEmpty(localFilePaths)) return filePaths;
 
   const gitPattern = new RegExp(".*-?testrail-report.json");
-  const trunkPattern = projectId && suiteId && `testrail-${projectId}-${suiteId}-report.json`;
+  const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
 
   localFilePaths.forEach((localFilePath) => {
     if (trunkPattern) {
-      localFilePath === trunkPattern && filePaths.push(localFilePath);
+      trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
     } else {
       gitPattern.test(localFilePath) && filePaths.push(localFilePath);
     }
   });
-
   return filePaths;
 }
 
+export async function getTrunkTestRuns(): Promise<TestRun[]> {
+    const testRuns: TestRun[] = [];
+    await fs.readdir("./").then((localFilePaths) => {
+        const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
+        filePaths.forEach((fileName) => {
+            testRuns.push(parseFileName(fileName));
+        });
+    }).catch((error: any) => {
+        logError(`Reading file system has failed:: ${error.message}`);
+    });
+    return testRuns;
+}
+function parseFileName(fileName: string): TestRun {
+    const parts = fileName.split("-");
+    return {
+        projectId: parseInt(parts[1], 10),
+        suiteId:  parseInt(parts[2], 10)
+    }
+}
+
 export async function extractTestResults(
-  projectId?: number,
-  suiteId?: number
+  projectId?: string,
+  suiteId?: string
 ): Promise<INewTestResult[]> {
   return new Promise((resolve) => {
     let testRailResults: INewTestResult[] = [];

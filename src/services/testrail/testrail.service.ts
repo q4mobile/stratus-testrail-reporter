@@ -68,7 +68,7 @@ export default class TestrailService {
       // and if one is found for this suite and jira key, we simply return it
       const testRunFilters = {
         milestone_id: testRunOptions.milestone_id,
-        suite_id: this.runInputs.suiteId,
+        suite_id: this.runInputs.testRun.suiteId,
       };
       const { body: testRunsResponse } = await this.getTestRuns(testRunFilters);
       // @ts-ignore because the types for body are incorrect
@@ -162,19 +162,19 @@ export default class TestrailService {
   }
 
   async getCases(filters?: ICaseFilters): PromiseResponse<ICase[]> {
-    const caseFilters = { suite_id: this.runInputs.suiteId, limit: 10000, ...filters };
+    const caseFilters = { suite_id: this.runInputs.testRun.suiteId, limit: 10000, ...filters };
 
-    return this.testRailClient.getCases(this.runInputs.projectId, caseFilters);
+    return this.testRailClient.getCases(this.runInputs.testRun.projectId, caseFilters);
   }
 
   async getTestRuns(filters?: Partial<ITestRun>): PromiseResponse<ITestRun[]> {
     const testRunFilters = { refs: this.runInputs.jiraKey, is_completed: 0, ...filters };
 
-    return this.testRailClient.getRuns(this.runInputs.projectId, testRunFilters);
+    return this.testRailClient.getRuns(this.runInputs.testRun.projectId, testRunFilters);
   }
 
   async createTestRun(testRunOptions: INewTestRun): PromiseResponse<ITestRun> {
-    return this.testRailClient.addRun(this.runInputs.projectId, testRunOptions);
+    return this.testRailClient.addRun(this.runInputs.testRun.projectId, testRunOptions);
   }
 
   async closeTestRun(runId: number): PromiseResponse<ITestRun> {
@@ -182,18 +182,18 @@ export default class TestrailService {
   }
 
   async getTestSuite(): PromiseResponse<ISuite> {
-    return this.testRailClient.getSuite(this.runInputs.suiteId);
+    return this.testRailClient.getSuite(this.runInputs.testRun.suiteId);
   }
 
   async getMilestones(): PromiseResponse<IMilestone[]> {
     // @ts-ignore because getMilestones response is typed incorrectly
     const milestoneFilters: IMilestoneFilters = { is_completed: 0 };
 
-    return this.testRailClient.getMilestones(this.runInputs.projectId, milestoneFilters);
+    return this.testRailClient.getMilestones(this.runInputs.testRun.projectId, milestoneFilters);
   }
 
   async createMilestone(milestoneOptions: INewMilestone): PromiseResponse<IMilestone> {
-    return this.testRailClient.addMilestone(this.runInputs.projectId, milestoneOptions);
+    return this.testRailClient.addMilestone(this.runInputs.testRun.projectId, milestoneOptions);
   }
 
   async closeMilestone(milestone_id: number): PromiseResponse<IMilestone> {

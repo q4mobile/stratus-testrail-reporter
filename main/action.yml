@@ -1,0 +1,28 @@
+name: "Stratus Testrail Reporter"
+description: "Stratus Testrail Reporter"
+author: "Q4Inc"
+inputs:
+  jira_key:
+    required: false
+    description: Used in trunk-based development flow. This key is used to synchronize milestones and test runs with the feature.
+  regression_mode:
+    required: false
+    description: Used in git development flow. This will determine whether or not to leverage milestones to track regression
+  network_url:
+    required: true
+    description: The Testrail account domain name
+  username:
+    required: true
+    description: The username associated with the test runner
+  api_key:
+    required: true
+    description: The API key associated with the username
+  project_id:
+    required: false
+    description: The project ID of the Testrail project
+  suite_id:
+    required: false
+    description: The suite ID of the Testrail project
+runs:
+  using: "node16"
+  main: "../dist/index.js"
