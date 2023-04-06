@@ -40,7 +40,13 @@ runs:
         regex: '(?<=(feat|fix|docs|style|refactor|perf|test|chore)\()[^)]+(?=\))'
         flags: gm
 
-    - uses: ${{github.action_path}}
+    - name: properties
+      id: properties
+      shell: bash
+      run: |
+        echo "github_action_path=./${{ env.GITHUB_ACTION_PATH }}/main" >> $GITHUB_OUTPUT
+
+    - uses: ${{ steps.properties.outputs.github_action_path }}
       id: report
       env:
         NODE_ENV: ${{ env.node_env }}
