@@ -4,8 +4,8 @@ exports.extractTestResults = exports.getTrunkTestRuns = exports.extractFilePaths
 const core_1 = require("@actions/core");
 const fs_1 = require("fs");
 const lodash_1 = require("lodash");
-const { github } = require('@actions/github');
-const source_code_directory = github.context.workspace;
+const source_code_directory = process.env['GITHUB_WORKSPACE'] || './';
+console.log(source_code_directory);
 function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const filePaths = [];
     if ((0, lodash_1.isEmpty)(localFilePaths))

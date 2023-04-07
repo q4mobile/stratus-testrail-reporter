@@ -1,11 +1,11 @@
-import {setFailed, error as logError, getInput} from "@actions/core";
+import {setFailed, error as logError } from "@actions/core";
 import { promises as fs } from "fs";
 import { isEmpty } from "lodash";
 import type { INewTestResult } from "testrail-api";
 import type { TestRun } from "./run.definition";
-const { github } = require('@actions/github');
 
-const source_code_directory = github.context.workspace;
+const source_code_directory = process.env['GITHUB_WORKSPACE'] || './';
+console.log(source_code_directory);
 export function extractFilePaths(
   localFilePaths: string[],
   projectIdPattern?: string,
