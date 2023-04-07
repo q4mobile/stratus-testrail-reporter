@@ -20,6 +20,12 @@ export async function run(): Promise<void> {
     password: getInput(InputKey.ApiKey),
   };
     try {
+      console.log(jiraKey);
+      console.log(regressionMode);
+      console.log(projectId);
+      console.log(suiteId);
+      console.log(trunkMode);
+      console.log(testRailOptions);
       let testRuns: TestRun[];
       if (trunkMode) {
         testRuns = await getTrunkTestRuns();
