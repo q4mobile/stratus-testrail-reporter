@@ -23,6 +23,9 @@ inputs:
   suite_id:
     required: false
     description: The suite ID of the Testrail project
+outputs:
+  test_runs:
+    description: The result of the test runs
 runs:
   using: "node16"
   main: "../dist/index.js"

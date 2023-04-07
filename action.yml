@@ -33,6 +33,11 @@ inputs:
   action_ref:
     required: true
     description: The ref the github action.
+outputs:
+  test_runs:
+    value: ${{ steps.report.outputs.test_runs }}
+    description: The result of the test runs
+
 runs:
   using: "composite"
   steps:
