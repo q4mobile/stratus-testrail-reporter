@@ -44,10 +44,6 @@ runs:
         flags: gm
 
     - name: checkout
-      shell: bash
-      run: echo '${{ inputs.action_ref }}'
-
-    - name: checkout
       uses: actions/checkout@v3.0.2
       with:
         repository: q4mobile/stratus-testrail-presenter
