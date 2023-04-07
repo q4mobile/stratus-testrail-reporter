@@ -76,8 +76,6 @@ A string to represent the time when the TestRail run completed in the action.
   uses: q4mobile/stratus-testrail-reporter@v1
   with:
     regression_mode: true
-    network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
-    username: ${{ secrets.TESTRAIL_USER_EMAIL }}
     api_key: ${{ secrets.TESTRAIL_API_KEY }}
     project_id: 26
     suite_id: 11417
@@ -95,12 +93,7 @@ Ensure that file(s) are available to parse. The reporter will inspect the file s
 - name: Report to TestRail
   uses: q4mobile/stratus-testrail-reporter@v1
   with:
-    jira_key: "JAV-13"
-    network_url: ${{ secrets.TESTRAIL_NETWORK_URL }}
-    username: ${{ secrets.TESTRAIL_USER_EMAIL }}
     api_key: ${{ secrets.TESTRAIL_API_KEY }}
-    project_id: 26
-    suite_id: 11417
 ```
 
 Ensure that file(s) are available to parse. The reporter will inspect the file system using this pattern:
