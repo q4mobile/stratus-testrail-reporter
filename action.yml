@@ -30,6 +30,9 @@ inputs:
     required: false
     description: The suite ID of the Testrail project
     default: 'true'
+  action_ref:
+    required: true
+    description: The ref the github action.
 runs:
   using: "composite"
   steps:
@@ -40,13 +43,14 @@ runs:
         regex: '(?<=(feat|fix|docs|style|refactor|perf|test|chore)\()[^)]+(?=\))'
         flags: gm
 
-    - name: properties
-      id: properties
-      shell: bash
-      run: |
-        echo "github_action_path=./${{ env.GITHUB_ACTION_PATH }}/main" >> $GITHUB_OUTPUT
+    - name: checkout
+      uses: actions/checkout@v3.0.2
+      with:
+        repository: q4mobile/stratus-testrail-presenter
+        path: ./.github/actions/stratus-testrail-presenter
+        ref: ${{ inputs.action_ref }}
 
-    - uses: ${{ steps.properties.outputs.github_action_path }}
+    - uses: ./.github/actions/stratus-testrail-presenter
       id: report
       env:
         NODE_ENV: ${{ env.node_env }}
