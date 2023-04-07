@@ -46,11 +46,11 @@ runs:
     - name: checkout
       uses: actions/checkout@v3.0.2
       with:
-        repository: q4mobile/stratus-testrail-presenter
-        path: ./.github/actions/stratus-testrail-presenter
+        repository: q4mobile/stratus-testrail-reporter
+        path: ./.github/actions/stratus-testrail-reporter
         ref: ${{ inputs.action_ref }}
 
-    - uses: ./.github/actions/stratus-testrail-presenter
+    - uses: ./.github/actions/stratus-testrail-reporter
       id: report
       env:
         NODE_ENV: ${{ env.node_env }}
