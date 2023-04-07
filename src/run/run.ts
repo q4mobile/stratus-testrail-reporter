@@ -23,7 +23,6 @@ export async function run(): Promise<void> {
       let testRuns: TestRun[];
       if (trunkMode) {
         testRuns = await getTrunkTestRuns();
-        console.log(testRuns);
         for (const testRun of testRuns) {
           await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
         }
@@ -31,7 +30,6 @@ export async function run(): Promise<void> {
         testRuns = [{projectId: projectId, suiteId: suiteId}];
         await reportToTestrail(jiraKey, trunkMode, regressionMode, testRuns[0], testRailOptions);
       }
-      console.log(testRuns);
       setOutput("completion_time", new Date().toTimeString());
       setOutput("test_runs", testRuns); // output run_id for future steps
     } catch (error) {

@@ -55,7 +55,7 @@ runs:
         path: ./.github/actions/stratus-testrail-reporter
         ref: ${{ inputs.action_ref }}
 
-    - uses: ./.github/actions/stratus-testrail-reporter
+    - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
       env:
         NODE_ENV: ${{ env.node_env }}
