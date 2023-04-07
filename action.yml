@@ -63,6 +63,10 @@ runs:
         suite_id: ${{ inputs.suite_id }}
         jira_key: ${{ steps.jira-key-match.outputs.match }}
 
+    - name: test
+      shell: bash
+      run: echo '${{ steps.report.outputs.test_runs }}'
+
     - if: inputs.report_results == 'true'
       id: result
       uses: q4mobile/stratus-testrail-presenter@fixes
