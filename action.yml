@@ -48,7 +48,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-presenter
         path: ./.github/actions/stratus-testrail-presenter
-        ref: ${{ inputs.action_ref }}
+        ref: ${{ github.action_ref }}
 
     - uses: ./.github/actions/stratus-testrail-presenter
       id: report
