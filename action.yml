@@ -45,14 +45,14 @@ runs:
 
     - name: checkout
       shell: bash
-      run: echo '${{ github.action_ref }}'
+      run: echo '${{ inputs.action_ref }}'
 
     - name: checkout
       uses: actions/checkout@v3.0.2
       with:
         repository: q4mobile/stratus-testrail-presenter
         path: ./.github/actions/stratus-testrail-presenter
-        ref: ${{ github.action_ref }}
+        ref: ${{ inputs.action_ref }}
 
     - uses: ./.github/actions/stratus-testrail-presenter
       id: report
