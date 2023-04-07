@@ -4,6 +4,8 @@ exports.extractTestResults = exports.getTrunkTestRuns = exports.extractFilePaths
 const core_1 = require("@actions/core");
 const fs_1 = require("fs");
 const lodash_1 = require("lodash");
+const { github } = require('@actions/github');
+const source_code_directory = github.context.workspace;
 function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const filePaths = [];
     if ((0, lodash_1.isEmpty)(localFilePaths))
@@ -11,6 +13,7 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const gitPattern = new RegExp(".*-?testrail-report.json");
     const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
     localFilePaths.forEach((localFilePath) => {
+        console.log(localFilePath);
         if (trunkPattern) {
             trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
         }
@@ -23,7 +26,7 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
 exports.extractFilePaths = extractFilePaths;
 async function getTrunkTestRuns() {
     const testRuns = [];
-    await fs_1.promises.readdir("./").then((localFilePaths) => {
+    await fs_1.promises.readdir(source_code_directory).then((localFilePaths) => {
         const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
         filePaths.forEach((fileName) => {
             testRuns.push(parseFileName(fileName));
@@ -44,7 +47,7 @@ function parseFileName(fileName) {
 async function extractTestResults(projectId, suiteId) {
     return new Promise((resolve) => {
         let testRailResults = [];
-        fs_1.promises.readdir("./")
+        fs_1.promises.readdir(source_code_directory)
             .then((localFilePaths) => {
             const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
             if ((0, lodash_1.isEmpty)(filePaths))

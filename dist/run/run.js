@@ -27,6 +27,7 @@ async function run() {
         let testRuns;
         if (trunkMode) {
             testRuns = await (0, run_utils_1.getTrunkTestRuns)();
+            console.log(testRuns);
             for (const testRun of testRuns) {
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
@@ -35,6 +36,7 @@ async function run() {
             testRuns = [{ projectId: projectId, suiteId: suiteId }];
             await reportToTestrail(jiraKey, trunkMode, regressionMode, testRuns[0], testRailOptions);
         }
+        console.log(testRuns);
         (0, core_1.setOutput)("completion_time", new Date().toTimeString());
         (0, core_1.setOutput)("test_runs", testRuns); // output run_id for future steps
     }
