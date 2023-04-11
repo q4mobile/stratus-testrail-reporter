@@ -61,16 +61,9 @@ async function run() {
         password: (0, core_1.getInput)(run_definition_1.InputKey.ApiKey),
     };
     try {
-        console.log(jiraKey);
-        console.log(regressionMode);
-        console.log(projectId);
-        console.log(suiteId);
-        console.log(trunkMode);
-        console.log(testRailOptions);
         let testRuns;
         if (trunkMode) {
             testRuns = await (0, run_utils_1.getTrunkTestRuns)();
-            console.log(testRuns);
             for (const testRun of testRuns) {
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
@@ -153,8 +146,6 @@ exports.extractTestResults = exports.getTrunkTestRuns = exports.extractFilePaths
 const core_1 = __nccwpck_require__(2186);
 const fs_1 = __nccwpck_require__(7147);
 const lodash_1 = __nccwpck_require__(250);
-const source_code_directory = process.env['GITHUB_WORKSPACE'] || './';
-console.log(source_code_directory);
 function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const filePaths = [];
     if ((0, lodash_1.isEmpty)(localFilePaths))
@@ -162,9 +153,8 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const gitPattern = new RegExp(".*-?testrail-report.json");
     const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
     localFilePaths.forEach((localFilePath) => {
-        console.log(`${localFilePath}`);
         if (trunkPattern) {
-            trunkPattern.test(localFilePath) && filePaths.push(localFilePath) && console.log(`found =  ${localFilePath}`);
+            trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
         }
         else {
             gitPattern.test(localFilePath) && filePaths.push(localFilePath);
@@ -175,7 +165,7 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
 exports.extractFilePaths = extractFilePaths;
 async function getTrunkTestRuns() {
     const testRuns = [];
-    await fs_1.promises.readdir(source_code_directory).then((localFilePaths) => {
+    await fs_1.promises.readdir("./").then((localFilePaths) => {
         const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
         filePaths.forEach((fileName) => {
             testRuns.push(parseFileName(fileName));
@@ -196,7 +186,7 @@ function parseFileName(fileName) {
 async function extractTestResults(projectId, suiteId) {
     return new Promise((resolve) => {
         let testRailResults = [];
-        fs_1.promises.readdir(source_code_directory)
+        fs_1.promises.readdir("./")
             .then((localFilePaths) => {
             const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
             if ((0, lodash_1.isEmpty)(filePaths))

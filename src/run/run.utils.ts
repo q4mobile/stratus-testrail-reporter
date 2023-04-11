@@ -4,8 +4,7 @@ import { isEmpty } from "lodash";
 import type { INewTestResult } from "testrail-api";
 import type { TestRun } from "./run.definition";
 
-const source_code_directory = process.env['GITHUB_WORKSPACE'] || './';
-console.log(source_code_directory);
+
 export function extractFilePaths(
   localFilePaths: string[],
   projectIdPattern?: string,
@@ -19,9 +18,8 @@ export function extractFilePaths(
   const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
 
   localFilePaths.forEach((localFilePath) => {
-      console.log(`${localFilePath}`);
     if (trunkPattern) {
-      trunkPattern.test(localFilePath) && filePaths.push(localFilePath) && console.log(`found =  ${localFilePath}`);
+      trunkPattern.test(localFilePath) && filePaths.push(localFilePath) ;
     } else {
       gitPattern.test(localFilePath) && filePaths.push(localFilePath);
     }
@@ -31,7 +29,7 @@ export function extractFilePaths(
 
 export async function getTrunkTestRuns(): Promise<TestRun[]> {
     const testRuns: TestRun[] = [];
-    await fs.readdir(source_code_directory).then((localFilePaths) => {
+    await fs.readdir("./").then((localFilePaths) => {
         const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
         filePaths.forEach((fileName) => {
             testRuns.push(parseFileName(fileName));
@@ -56,7 +54,7 @@ export async function extractTestResults(
   return new Promise((resolve) => {
     let testRailResults: INewTestResult[] = [];
 
-    fs.readdir(source_code_directory)
+    fs.readdir("./")
       .then((localFilePaths) => {
         const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
 

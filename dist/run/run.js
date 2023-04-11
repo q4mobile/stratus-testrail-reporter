@@ -24,16 +24,9 @@ async function run() {
         password: (0, core_1.getInput)(run_definition_1.InputKey.ApiKey),
     };
     try {
-        console.log(jiraKey);
-        console.log(regressionMode);
-        console.log(projectId);
-        console.log(suiteId);
-        console.log(trunkMode);
-        console.log(testRailOptions);
         let testRuns;
         if (trunkMode) {
             testRuns = await (0, run_utils_1.getTrunkTestRuns)();
-            console.log(testRuns);
             for (const testRun of testRuns) {
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
