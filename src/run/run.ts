@@ -24,6 +24,7 @@ export async function run(): Promise<void> {
       if (trunkMode) {
         testRuns = await getTrunkTestRuns();
         for (const testRun of testRuns) {
+          console.log(testRun);
           await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
         }
       } else {

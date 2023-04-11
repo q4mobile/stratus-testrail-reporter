@@ -28,6 +28,7 @@ async function run() {
         if (trunkMode) {
             testRuns = await (0, run_utils_1.getTrunkTestRuns)();
             for (const testRun of testRuns) {
+                console.log(testRun);
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
         }

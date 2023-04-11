@@ -65,6 +65,7 @@ async function run() {
         if (trunkMode) {
             testRuns = await (0, run_utils_1.getTrunkTestRuns)();
             for (const testRun of testRuns) {
+                console.log(testRun);
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
         }
@@ -420,7 +421,7 @@ function extractError(error) {
     var _a;
     if ((0, lodash_1.isEmpty)(error))
         return "An error is present, but could not be parsed";
-    return error.error || ((_a = error.message) === null || _a === void 0 ? void 0 : _a.error) || error.message || JSON.stringify(error);
+    return error || error.error || ((_a = error.message) === null || _a === void 0 ? void 0 : _a.error) || error.message || JSON.stringify(error);
 }
 exports.extractError = extractError;
 
