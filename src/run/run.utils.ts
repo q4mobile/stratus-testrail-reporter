@@ -21,10 +21,8 @@ export function extractFilePaths(
   localFilePaths.forEach((localFilePath) => {
       console.log(`${localFilePath}`);
     if (trunkPattern) {
-        console.log(`${trunkPattern}::${localFilePath}`);
       trunkPattern.test(localFilePath) && filePaths.push(localFilePath) && console.log(`found =  ${localFilePath}`);
     } else {
-        console.log(`${gitPattern}::${localFilePath}`);
       gitPattern.test(localFilePath) && filePaths.push(localFilePath);
     }
   });
@@ -34,14 +32,10 @@ export function extractFilePaths(
 export async function getTrunkTestRuns(): Promise<TestRun[]> {
     const testRuns: TestRun[] = [];
     await fs.readdir(source_code_directory).then((localFilePaths) => {
-        console.log("a")
         const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
-        console.log("b")
         filePaths.forEach((fileName) => {
-            console.log(`tee: ${fileName}`)
             testRuns.push(parseFileName(fileName));
         });
-        console.log("b")
     }).catch((error: any) => {
         logError(`Reading file system has failed:: ${error.message}`);
     });

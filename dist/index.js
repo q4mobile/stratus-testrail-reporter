@@ -54,7 +54,7 @@ async function run() {
     const regressionMode = (0, core_1.getBooleanInput)(run_definition_1.InputKey.RegressionMode);
     const projectId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.ProjectId), 10);
     const suiteId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.SuiteId), 10);
-    const trunkMode = !!projectId && !!suiteId;
+    const trunkMode = !projectId && !suiteId;
     const testRailOptions = {
         host: (0, core_1.getInput)(run_definition_1.InputKey.NetworkUrl),
         user: (0, core_1.getInput)(run_definition_1.InputKey.Username),
@@ -164,11 +164,9 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     localFilePaths.forEach((localFilePath) => {
         console.log(`${localFilePath}`);
         if (trunkPattern) {
-            console.log(`${trunkPattern}::${localFilePath}`);
             trunkPattern.test(localFilePath) && filePaths.push(localFilePath) && console.log(`found =  ${localFilePath}`);
         }
         else {
-            console.log(`${gitPattern}::${localFilePath}`);
             gitPattern.test(localFilePath) && filePaths.push(localFilePath);
         }
     });
@@ -178,14 +176,10 @@ exports.extractFilePaths = extractFilePaths;
 async function getTrunkTestRuns() {
     const testRuns = [];
     await fs_1.promises.readdir(source_code_directory).then((localFilePaths) => {
-        console.log("a");
         const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
-        console.log("b");
         filePaths.forEach((fileName) => {
-            console.log(`tee: ${fileName}`);
             testRuns.push(parseFileName(fileName));
         });
-        console.log("b");
     }).catch((error) => {
         (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
     });

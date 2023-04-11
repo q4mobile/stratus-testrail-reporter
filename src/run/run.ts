@@ -13,7 +13,7 @@ export async function run(): Promise<void> {
   const regressionMode = getBooleanInput(InputKey.RegressionMode);
   const projectId = parseInt(getInput(InputKey.ProjectId), 10);
   const suiteId = parseInt(getInput(InputKey.SuiteId), 10);
-  const trunkMode = !!projectId && !!suiteId;
+  const trunkMode = !projectId && !suiteId;
   const testRailOptions = {
     host: getInput(InputKey.NetworkUrl),
     user: getInput(InputKey.Username),

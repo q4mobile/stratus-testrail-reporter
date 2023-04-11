@@ -17,7 +17,7 @@ async function run() {
     const regressionMode = (0, core_1.getBooleanInput)(run_definition_1.InputKey.RegressionMode);
     const projectId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.ProjectId), 10);
     const suiteId = parseInt((0, core_1.getInput)(run_definition_1.InputKey.SuiteId), 10);
-    const trunkMode = !!projectId && !!suiteId;
+    const trunkMode = !projectId && !suiteId;
     const testRailOptions = {
         host: (0, core_1.getInput)(run_definition_1.InputKey.NetworkUrl),
         user: (0, core_1.getInput)(run_definition_1.InputKey.Username),
