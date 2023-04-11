@@ -162,11 +162,13 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const gitPattern = new RegExp(".*-?testrail-report.json");
     const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
     localFilePaths.forEach((localFilePath) => {
-        console.log(localFilePath);
+        console.log(`${localFilePath}`);
         if (trunkPattern) {
+            console.log(`${trunkPattern}::${localFilePath}`);
             trunkPattern.test(localFilePath) && filePaths.push(localFilePath) && console.log(`found =  ${localFilePath}`);
         }
         else {
+            console.log(`${gitPattern}::${localFilePath}`);
             gitPattern.test(localFilePath) && filePaths.push(localFilePath);
         }
     });
