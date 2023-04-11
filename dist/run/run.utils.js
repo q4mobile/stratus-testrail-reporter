@@ -15,7 +15,7 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     localFilePaths.forEach((localFilePath) => {
         console.log(localFilePath);
         if (trunkPattern) {
-            trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
+            trunkPattern.test(localFilePath) && filePaths.push(localFilePath) && console.log(`found =  ${localFilePath}`);
         }
         else {
             gitPattern.test(localFilePath) && filePaths.push(localFilePath);
@@ -27,10 +27,14 @@ exports.extractFilePaths = extractFilePaths;
 async function getTrunkTestRuns() {
     const testRuns = [];
     await fs_1.promises.readdir(source_code_directory).then((localFilePaths) => {
+        console.log("a");
         const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
+        console.log("b");
         filePaths.forEach((fileName) => {
+            console.log(`tee: ${fileName}`);
             testRuns.push(parseFileName(fileName));
         });
+        console.log("b");
     }).catch((error) => {
         (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
     });
