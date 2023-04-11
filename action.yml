@@ -72,8 +72,8 @@ runs:
       id: result
       uses: q4mobile/stratus-testrail-presenter@fixes
       with:
-        api_key: ${{ inputs.testrail_api_key }}
-        network_url: ${{ inputs.testrail_network_url }}
+        api_key: ${{ inputs.api_key }}
+        network_url: ${{ inputs.network_url }}
         test_runs: ${{ steps.report.outputs.test_runs }}
-        username: ${{ inputs.testrail_username }}
+        username: ${{ inputs.username }}
         current_branch: ${{ inputs.current_branch }}
