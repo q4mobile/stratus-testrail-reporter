@@ -24,7 +24,6 @@ export async function run(): Promise<void> {
       if (trunkMode) {
         testRuns = await getTrunkTestRuns();
         for (const testRun of testRuns) {
-          console.log(testRun);
           await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
         }
       } else {
@@ -99,4 +98,5 @@ async function reportToTestrail(jiraKey: string, trunkMode: boolean, regressionM
   if (environment === Environment.Production && suite?.name?.includes("E2E")) {
     await testrailService.closeMilestone(milestone?.id);
   }
+  setTimeout(() => { console.log("Waiting for testrail to catchup..."); }, 5000);
 }

@@ -65,7 +65,6 @@ async function run() {
         if (trunkMode) {
             testRuns = await (0, run_utils_1.getTrunkTestRuns)();
             for (const testRun of testRuns) {
-                console.log(testRun);
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
         }
@@ -132,6 +131,7 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
     if (environment === run_definition_1.Environment.Production && ((_a = suite === null || suite === void 0 ? void 0 : suite.name) === null || _a === void 0 ? void 0 : _a.includes("E2E"))) {
         await testrailService.closeMilestone(milestone === null || milestone === void 0 ? void 0 : milestone.id);
     }
+    setTimeout(() => { console.log("Waiting for testrail to catchup..."); }, 5000);
 }
 
 
