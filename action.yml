@@ -62,6 +62,11 @@ runs:
         echo $(git symbolic-ref --short HEAD)
         echo '${{ github.action_ref }}'
         echo '${{ github.action_repository }}'
+        echo '${{ github.action_path }}'
+        find  /opt/actions-runner-1/
+        find  /opt/actions-runner-2/
+        find  /opt/actions-runner-3/
+        find  /opt/actions-runner-4/
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
