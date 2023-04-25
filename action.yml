@@ -30,9 +30,6 @@ inputs:
     required: false
     description: A boolean to report results to the presenter
     default: 'true'
-  action_ref:
-    required: true
-    description: The ref the github action.
 outputs:
   test_runs:
     value: ${{ steps.report.outputs.test_runs }}
@@ -53,7 +50,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-reporter
         path: ./.github/actions/stratus-testrail-reporter
-        ref: ${{ inputs.action_ref }}
+        ref: v10
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
