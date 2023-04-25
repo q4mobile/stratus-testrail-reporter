@@ -18,10 +18,21 @@ export enum InputKey {
   SuiteId = "suite_id",
 }
 
+export type TestRunConfig = {
+  projectId: number;
+  suiteId: number;
+  runId?: number;
+};
+
 export interface RunInputs {
   jiraKey: string | undefined;
   trunkMode: boolean;
   regressionMode: boolean;
-  projectId: number;
-  suiteId: number;
+  testRunConfig: TestRunConfig;
 }
+
+export type TestRailOptions = {
+  host: string;
+  user: string;
+  password: string;
+};
