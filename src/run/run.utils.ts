@@ -1,9 +1,8 @@
-import {setFailed, error as logError } from "@actions/core";
+import { setFailed, error as logError } from "@actions/core";
 import { promises as fs } from "fs";
 import { isEmpty } from "lodash";
 import type { INewTestResult } from "testrail-api";
-import type { TestRun } from "./run.definition";
-
+import type { TestRunConfig } from "./run.definition";
 
 export function extractFilePaths(
   localFilePaths: string[],
@@ -15,11 +14,14 @@ export function extractFilePaths(
   if (isEmpty(localFilePaths)) return filePaths;
 
   const gitPattern = new RegExp(".*-?testrail-report.json");
-  const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
+  const trunkPattern =
+    projectIdPattern &&
+    suiteIdPattern &&
+    new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
 
   localFilePaths.forEach((localFilePath) => {
     if (trunkPattern) {
-      trunkPattern.test(localFilePath) && filePaths.push(localFilePath) ;
+      trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
     } else {
       gitPattern.test(localFilePath) && filePaths.push(localFilePath);
     }
@@ -27,36 +29,47 @@ export function extractFilePaths(
   return filePaths;
 }
 
-export async function getTrunkTestRuns(): Promise<TestRun[]> {
-    const testRuns: TestRun[] = [];
-    await fs.readdir("./").then((localFilePaths) => {
-        const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
-        filePaths.forEach((fileName) => {
-            testRuns.push(parseFileName(fileName));
-        });
-    }).catch((error: any) => {
-        logError(`Reading file system has failed:: ${error.message}`);
-    });
-    return testRuns;
+function parseFileName(fileName: string): TestRunConfig {
+  const parts = fileName.split("-");
+
+  return {
+    projectId: parseInt(parts[1], 10),
+    suiteId: parseInt(parts[2], 10),
+  };
 }
-function parseFileName(fileName: string): TestRun {
-    const parts = fileName.split("-");
-    return {
-        projectId: parseInt(parts[1], 10),
-        suiteId:  parseInt(parts[2], 10)
-    }
+
+export async function getTrunkTestRunConfigs(): Promise<TestRunConfig[]> {
+  const testRunConfigs: TestRunConfig[] = [];
+
+  await fs
+    .readdir("./")
+    .then((localFilePaths) => {
+      const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
+      filePaths.forEach((fileName) => {
+        testRunConfigs.push(parseFileName(fileName));
+      });
+    })
+    .catch((error: any) => {
+      logError(`Reading file system has failed:: ${error.message}`);
+    });
+
+  return testRunConfigs;
 }
 
 export async function extractTestResults(
-  projectId?: string,
-  suiteId?: string
+  projectId?: number,
+  suiteId?: number
 ): Promise<INewTestResult[]> {
   return new Promise((resolve) => {
     let testRailResults: INewTestResult[] = [];
 
     fs.readdir("./")
       .then((localFilePaths) => {
-        const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
+        const filePaths = extractFilePaths(
+          localFilePaths,
+          projectId?.toString(),
+          suiteId?.toString()
+        );
 
         if (isEmpty(filePaths)) return Promise.resolve([]);
 

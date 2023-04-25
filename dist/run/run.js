@@ -24,37 +24,36 @@ async function run() {
         password: (0, core_1.getInput)(run_definition_1.InputKey.ApiKey),
     };
     try {
-        let testRuns;
+        let testRunConfigs;
         if (trunkMode) {
-            testRuns = await (0, run_utils_1.getTrunkTestRuns)();
-            for (const testRun of testRuns) {
+            testRunConfigs = await (0, run_utils_1.getTrunkTestRunConfigs)();
+            for (const testRun of testRunConfigs) {
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
         }
         else {
-            testRuns = [{ projectId: projectId, suiteId: suiteId }];
-            await reportToTestrail(jiraKey, trunkMode, regressionMode, testRuns[0], testRailOptions);
+            testRunConfigs = [{ projectId: projectId, suiteId: suiteId }];
+            await reportToTestrail(jiraKey, trunkMode, regressionMode, testRunConfigs[0], testRailOptions);
         }
-        console.log(testRuns);
         (0, core_1.setOutput)("completion_time", new Date().toTimeString());
-        (0, core_1.setOutput)("test_runs", testRuns); // output run_id for future steps
+        (0, core_1.setOutput)("test_runs", testRunConfigs); // output run_id for future steps
     }
     catch (error) {
         (0, core_1.setFailed)(`Stratus TestRail Reporter encountered an issue: ${(0, utils_1.extractError)(error)}`);
     }
 }
 exports.run = run;
-async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions) {
+async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRunConfig, testRailOptions) {
     var _a;
     const runOptions = {
         jiraKey,
         trunkMode,
         regressionMode,
-        testRun,
+        testRunConfig,
     };
     const testrailService = new services_1.TestrailService(testRailOptions, runOptions);
     const results = trunkMode
-        ? await (0, run_utils_1.extractTestResults)(testRun.projectId.toString(), testRun.suiteId.toString())
+        ? await (0, run_utils_1.extractTestResults)(testRunConfig.projectId, testRunConfig.suiteId)
         : await (0, run_utils_1.extractTestResults)();
     if ((0, lodash_1.isEmpty)(results)) {
         (0, core_1.setFailed)("No results for reporting to TestRail were found.");
@@ -68,7 +67,7 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
     const milestone = await testrailService.establishMilestone();
     // @ts-ignore because the type for INewTestRun is incorrect
     const testRunOptions = {
-        suite_id: testRun.suiteId,
+        suite_id: testRunConfig.suiteId,
         // @ts-ignore because milestone_id is not required
         milestone_id: trunkMode || regressionMode ? milestone === null || milestone === void 0 ? void 0 : milestone.id : null,
         name: trunkMode
@@ -78,15 +77,15 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
                 .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
         include_all: true,
     };
-    const result = await testrailService.establishTestRun(testRunOptions, results);
-    testRun.runId = result.id;
+    const testRun = await testrailService.establishTestRun(testRunOptions, results);
+    testRunConfig.runId = testRun.id;
     if ((0, lodash_1.isEmpty)(testRun)) {
         (0, core_1.setFailed)("A TestRail Run could not be established.");
         throw new Error();
     }
-    await testrailService.addTestRunResults(testRun.runId, results);
-    if ((trunkMode && result.untested_count === 0) || (!trunkMode && !regressionMode)) {
-        await testrailService.closeTestRun(testRun.runId);
+    await testrailService.addTestRunResults(testRunConfig.runId, results);
+    if ((trunkMode && testRun.untested_count === 0) || (!trunkMode && !regressionMode)) {
+        await testrailService.closeTestRun(testRunConfig.runId);
     }
     if (trunkMode) {
         await testrailService.sweepUpTestRuns(milestone === null || milestone === void 0 ? void 0 : milestone.id);
@@ -94,5 +93,4 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
     if (environment === run_definition_1.Environment.Production && ((_a = suite === null || suite === void 0 ? void 0 : suite.name) === null || _a === void 0 ? void 0 : _a.includes("E2E"))) {
         await testrailService.closeMilestone(milestone === null || milestone === void 0 ? void 0 : milestone.id);
     }
-    setTimeout(() => { console.log("Waiting for testrail to catchup..."); }, 5000);
 }

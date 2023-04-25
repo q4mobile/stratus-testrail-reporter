@@ -61,37 +61,36 @@ async function run() {
         password: (0, core_1.getInput)(run_definition_1.InputKey.ApiKey),
     };
     try {
-        let testRuns;
+        let testRunConfigs;
         if (trunkMode) {
-            testRuns = await (0, run_utils_1.getTrunkTestRuns)();
-            for (const testRun of testRuns) {
+            testRunConfigs = await (0, run_utils_1.getTrunkTestRunConfigs)();
+            for (const testRun of testRunConfigs) {
                 await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
             }
         }
         else {
-            testRuns = [{ projectId: projectId, suiteId: suiteId }];
-            await reportToTestrail(jiraKey, trunkMode, regressionMode, testRuns[0], testRailOptions);
+            testRunConfigs = [{ projectId: projectId, suiteId: suiteId }];
+            await reportToTestrail(jiraKey, trunkMode, regressionMode, testRunConfigs[0], testRailOptions);
         }
-        console.log(testRuns);
         (0, core_1.setOutput)("completion_time", new Date().toTimeString());
-        (0, core_1.setOutput)("test_runs", testRuns); // output run_id for future steps
+        (0, core_1.setOutput)("test_runs", testRunConfigs); // output run_id for future steps
     }
     catch (error) {
         (0, core_1.setFailed)(`Stratus TestRail Reporter encountered an issue: ${(0, utils_1.extractError)(error)}`);
     }
 }
 exports.run = run;
-async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions) {
+async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRunConfig, testRailOptions) {
     var _a;
     const runOptions = {
         jiraKey,
         trunkMode,
         regressionMode,
-        testRun,
+        testRunConfig,
     };
     const testrailService = new services_1.TestrailService(testRailOptions, runOptions);
     const results = trunkMode
-        ? await (0, run_utils_1.extractTestResults)(testRun.projectId.toString(), testRun.suiteId.toString())
+        ? await (0, run_utils_1.extractTestResults)(testRunConfig.projectId, testRunConfig.suiteId)
         : await (0, run_utils_1.extractTestResults)();
     if ((0, lodash_1.isEmpty)(results)) {
         (0, core_1.setFailed)("No results for reporting to TestRail were found.");
@@ -105,7 +104,7 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
     const milestone = await testrailService.establishMilestone();
     // @ts-ignore because the type for INewTestRun is incorrect
     const testRunOptions = {
-        suite_id: testRun.suiteId,
+        suite_id: testRunConfig.suiteId,
         // @ts-ignore because milestone_id is not required
         milestone_id: trunkMode || regressionMode ? milestone === null || milestone === void 0 ? void 0 : milestone.id : null,
         name: trunkMode
@@ -115,15 +114,15 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
                 .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
         include_all: true,
     };
-    const result = await testrailService.establishTestRun(testRunOptions, results);
-    testRun.runId = result.id;
+    const testRun = await testrailService.establishTestRun(testRunOptions, results);
+    testRunConfig.runId = testRun.id;
     if ((0, lodash_1.isEmpty)(testRun)) {
         (0, core_1.setFailed)("A TestRail Run could not be established.");
         throw new Error();
     }
-    await testrailService.addTestRunResults(testRun.runId, results);
-    if ((trunkMode && result.untested_count === 0) || (!trunkMode && !regressionMode)) {
-        await testrailService.closeTestRun(testRun.runId);
+    await testrailService.addTestRunResults(testRunConfig.runId, results);
+    if ((trunkMode && testRun.untested_count === 0) || (!trunkMode && !regressionMode)) {
+        await testrailService.closeTestRun(testRunConfig.runId);
     }
     if (trunkMode) {
         await testrailService.sweepUpTestRuns(milestone === null || milestone === void 0 ? void 0 : milestone.id);
@@ -131,7 +130,6 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
     if (environment === run_definition_1.Environment.Production && ((_a = suite === null || suite === void 0 ? void 0 : suite.name) === null || _a === void 0 ? void 0 : _a.includes("E2E"))) {
         await testrailService.closeMilestone(milestone === null || milestone === void 0 ? void 0 : milestone.id);
     }
-    setTimeout(() => { console.log("Waiting for testrail to catchup..."); }, 5000);
 }
 
 
@@ -143,7 +141,7 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, tes
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.extractTestResults = exports.getTrunkTestRuns = exports.extractFilePaths = void 0;
+exports.extractTestResults = exports.getTrunkTestRunConfigs = exports.extractFilePaths = void 0;
 const core_1 = __nccwpck_require__(2186);
 const fs_1 = __nccwpck_require__(7147);
 const lodash_1 = __nccwpck_require__(250);
@@ -152,7 +150,9 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     if ((0, lodash_1.isEmpty)(localFilePaths))
         return filePaths;
     const gitPattern = new RegExp(".*-?testrail-report.json");
-    const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
+    const trunkPattern = projectIdPattern &&
+        suiteIdPattern &&
+        new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
     localFilePaths.forEach((localFilePath) => {
         if (trunkPattern) {
             trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
@@ -164,32 +164,35 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     return filePaths;
 }
 exports.extractFilePaths = extractFilePaths;
-async function getTrunkTestRuns() {
-    const testRuns = [];
-    await fs_1.promises.readdir("./").then((localFilePaths) => {
-        const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
-        filePaths.forEach((fileName) => {
-            testRuns.push(parseFileName(fileName));
-        });
-    }).catch((error) => {
-        (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
-    });
-    return testRuns;
-}
-exports.getTrunkTestRuns = getTrunkTestRuns;
 function parseFileName(fileName) {
     const parts = fileName.split("-");
     return {
         projectId: parseInt(parts[1], 10),
-        suiteId: parseInt(parts[2], 10)
+        suiteId: parseInt(parts[2], 10),
     };
 }
+async function getTrunkTestRunConfigs() {
+    const testRunConfigs = [];
+    await fs_1.promises
+        .readdir("./")
+        .then((localFilePaths) => {
+        const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
+        filePaths.forEach((fileName) => {
+            testRunConfigs.push(parseFileName(fileName));
+        });
+    })
+        .catch((error) => {
+        (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
+    });
+    return testRunConfigs;
+}
+exports.getTrunkTestRunConfigs = getTrunkTestRunConfigs;
 async function extractTestResults(projectId, suiteId) {
     return new Promise((resolve) => {
         let testRailResults = [];
         fs_1.promises.readdir("./")
             .then((localFilePaths) => {
-            const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
+            const filePaths = extractFilePaths(localFilePaths, projectId === null || projectId === void 0 ? void 0 : projectId.toString(), suiteId === null || suiteId === void 0 ? void 0 : suiteId.toString());
             if ((0, lodash_1.isEmpty)(filePaths))
                 return Promise.resolve([]);
             const promises = filePaths.map((filePath) => {
@@ -301,7 +304,7 @@ class TestrailService {
             // and if one is found for this suite and jira key, we simply return it
             const testRunFilters = {
                 milestone_id: testRunOptions.milestone_id,
-                suite_id: this.runInputs.testRun.suiteId,
+                suite_id: this.runInputs.testRunConfig.suiteId,
             };
             const { body: testRunsResponse } = await this.getTestRuns(testRunFilters);
             // @ts-ignore because the types for body are incorrect
@@ -374,29 +377,33 @@ class TestrailService {
         });
     }
     async getCases(filters) {
-        const caseFilters = { suite_id: this.runInputs.testRun.suiteId, limit: 10000, ...filters };
-        return this.testRailClient.getCases(this.runInputs.testRun.projectId, caseFilters);
+        const caseFilters = {
+            suite_id: this.runInputs.testRunConfig.suiteId,
+            limit: 10000,
+            ...filters,
+        };
+        return this.testRailClient.getCases(this.runInputs.testRunConfig.projectId, caseFilters);
     }
     async getTestRuns(filters) {
         const testRunFilters = { refs: this.runInputs.jiraKey, is_completed: 0, ...filters };
-        return this.testRailClient.getRuns(this.runInputs.testRun.projectId, testRunFilters);
+        return this.testRailClient.getRuns(this.runInputs.testRunConfig.projectId, testRunFilters);
     }
     async createTestRun(testRunOptions) {
-        return this.testRailClient.addRun(this.runInputs.testRun.projectId, testRunOptions);
+        return this.testRailClient.addRun(this.runInputs.testRunConfig.projectId, testRunOptions);
     }
     async closeTestRun(runId) {
         return this.testRailClient.closeRun(runId);
     }
     async getTestSuite() {
-        return this.testRailClient.getSuite(this.runInputs.testRun.suiteId);
+        return this.testRailClient.getSuite(this.runInputs.testRunConfig.suiteId);
     }
     async getMilestones() {
         // @ts-ignore because getMilestones response is typed incorrectly
         const milestoneFilters = { is_completed: 0 };
-        return this.testRailClient.getMilestones(this.runInputs.testRun.projectId, milestoneFilters);
+        return this.testRailClient.getMilestones(this.runInputs.testRunConfig.projectId, milestoneFilters);
     }
     async createMilestone(milestoneOptions) {
-        return this.testRailClient.addMilestone(this.runInputs.testRun.projectId, milestoneOptions);
+        return this.testRailClient.addMilestone(this.runInputs.testRunConfig.projectId, milestoneOptions);
     }
     async closeMilestone(milestone_id) {
         return this.testRailClient.updateMilestone(milestone_id, {

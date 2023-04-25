@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractTestResults = exports.getTrunkTestRuns = exports.extractFilePaths = void 0;
+exports.extractTestResults = exports.getTrunkTestRunConfigs = exports.extractFilePaths = void 0;
 const core_1 = require("@actions/core");
 const fs_1 = require("fs");
 const lodash_1 = require("lodash");
@@ -9,7 +9,9 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     if ((0, lodash_1.isEmpty)(localFilePaths))
         return filePaths;
     const gitPattern = new RegExp(".*-?testrail-report.json");
-    const trunkPattern = projectIdPattern && suiteIdPattern && new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
+    const trunkPattern = projectIdPattern &&
+        suiteIdPattern &&
+        new RegExp(`testrail-${projectIdPattern}-${suiteIdPattern}-report.json`);
     localFilePaths.forEach((localFilePath) => {
         if (trunkPattern) {
             trunkPattern.test(localFilePath) && filePaths.push(localFilePath);
@@ -21,32 +23,35 @@ function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     return filePaths;
 }
 exports.extractFilePaths = extractFilePaths;
-async function getTrunkTestRuns() {
-    const testRuns = [];
-    await fs_1.promises.readdir("./").then((localFilePaths) => {
-        const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
-        filePaths.forEach((fileName) => {
-            testRuns.push(parseFileName(fileName));
-        });
-    }).catch((error) => {
-        (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
-    });
-    return testRuns;
-}
-exports.getTrunkTestRuns = getTrunkTestRuns;
 function parseFileName(fileName) {
     const parts = fileName.split("-");
     return {
         projectId: parseInt(parts[1], 10),
-        suiteId: parseInt(parts[2], 10)
+        suiteId: parseInt(parts[2], 10),
     };
 }
+async function getTrunkTestRunConfigs() {
+    const testRunConfigs = [];
+    await fs_1.promises
+        .readdir("./")
+        .then((localFilePaths) => {
+        const filePaths = extractFilePaths(localFilePaths, ".*", ".*");
+        filePaths.forEach((fileName) => {
+            testRunConfigs.push(parseFileName(fileName));
+        });
+    })
+        .catch((error) => {
+        (0, core_1.error)(`Reading file system has failed:: ${error.message}`);
+    });
+    return testRunConfigs;
+}
+exports.getTrunkTestRunConfigs = getTrunkTestRunConfigs;
 async function extractTestResults(projectId, suiteId) {
     return new Promise((resolve) => {
         let testRailResults = [];
         fs_1.promises.readdir("./")
             .then((localFilePaths) => {
-            const filePaths = extractFilePaths(localFilePaths, projectId, suiteId);
+            const filePaths = extractFilePaths(localFilePaths, projectId === null || projectId === void 0 ? void 0 : projectId.toString(), suiteId === null || suiteId === void 0 ? void 0 : suiteId.toString());
             if ((0, lodash_1.isEmpty)(filePaths))
                 return Promise.resolve([]);
             const promises = filePaths.map((filePath) => {
