@@ -67,7 +67,7 @@ runs:
 
     - if: inputs.report_results == 'true'
       id: result
-      uses: q4mobile/stratus-testrail-presenter@fixes
+      uses: q4mobile/stratus-testrail-presenter@main
       with:
         api_key: ${{ inputs.api_key }}
         network_url: ${{ inputs.network_url }}
