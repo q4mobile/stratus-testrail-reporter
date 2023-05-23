@@ -29,7 +29,7 @@ inputs:
   report_results:
     required: false
     description: A boolean to report results to the presenter
-    default: true
+    default: false
 outputs:
   test_runs:
     value: ${{ steps.report.outputs.test_runs }}
