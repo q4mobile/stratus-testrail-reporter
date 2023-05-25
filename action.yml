@@ -39,7 +39,7 @@ runs:
   using: "composite"
   steps:
     - id: jira-key-match
-      uses: actions-ecosystem/action-regex-match@v2.0.2
+      uses: q4mobile/action-regex-match@v2.0.2-q4-0.0.1
       with:
         text: ${{ github.event.pull_request.title || github.event.head_commit.message }}
         regex: '(?<=(feat|fix|docs|style|refactor|perf|test|chore)\()[^)]+(?=\))'
@@ -50,7 +50,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-reporter
         path: ./.github/actions/stratus-testrail-reporter
-        ref: v10
+        ref: v12
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
@@ -67,7 +67,7 @@ runs:
 
     - if: inputs.report_results == 'true'
       id: result
-      uses: q4mobile/stratus-testrail-presenter@main
+      uses: q4mobile/stratus-testrail-presenter@v3
       with:
         api_key: ${{ inputs.api_key }}
         network_url: ${{ inputs.network_url }}
