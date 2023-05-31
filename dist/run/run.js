@@ -39,6 +39,7 @@ async function run() {
         (0, core_1.setOutput)("test_runs", testRunConfigs); // output run_id for future steps
     }
     catch (error) {
+        console.log(error);
         (0, core_1.setFailed)(`Stratus TestRail Reporter encountered an issue: ${(0, utils_1.extractError)(error)}`);
     }
 }
@@ -51,7 +52,7 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRunConfi
         regressionMode,
         testRunConfig,
     };
-    const testrailService = new services_1.TestrailService(testRailOptions, runOptions);
+    const testrailService = await new services_1.TestrailService(testRailOptions, runOptions);
     const results = trunkMode
         ? await (0, run_utils_1.extractTestResults)(testRunConfig.projectId, testRunConfig.suiteId)
         : await (0, run_utils_1.extractTestResults)();

@@ -14,7 +14,7 @@ class TestrailService {
         var _a, _b, _c, _d;
         const { body: milestonesResponse } = await this.getMilestones();
         // @ts-ignore because the types for body are not correct
-        const milestones = (_a = milestonesResponse === null || milestonesResponse === void 0 ? void 0 : milestonesResponse.milestones) !== null && _a !== void 0 ? _a : [];
+        const milestones = (_a = await (milestonesResponse === null || milestonesResponse === void 0 ? void 0 : milestonesResponse.milestones)) !== null && _a !== void 0 ? _a : [];
         let milestone;
         if (this.runInputs.trunkMode) {
             // if we're in trunk mode, we want a milestone per JIRA key, so if we can't find it, we make it
@@ -53,7 +53,7 @@ class TestrailService {
             };
             const { body: testRunsResponse } = await this.getTestRuns(testRunFilters);
             // @ts-ignore because the types for body are incorrect
-            const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
+            const testRuns = (_a = await (testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs)) !== null && _a !== void 0 ? _a : [];
             const noTestRuns = (0, lodash_1.isEmpty)(testRuns);
             if (noTestRuns) {
                 const { body: testRun } = await this.createTestRun({
@@ -127,31 +127,31 @@ class TestrailService {
             limit: 10000,
             ...filters,
         };
-        return this.testRailClient.getCases(this.runInputs.testRunConfig.projectId, caseFilters);
+        return await this.testRailClient.getCases(this.runInputs.testRunConfig.projectId, caseFilters);
     }
     async getTestRuns(filters) {
         const testRunFilters = { refs: this.runInputs.jiraKey, is_completed: 0, ...filters };
-        return this.testRailClient.getRuns(this.runInputs.testRunConfig.projectId, testRunFilters);
+        return await this.testRailClient.getRuns(this.runInputs.testRunConfig.projectId, testRunFilters);
     }
     async createTestRun(testRunOptions) {
-        return this.testRailClient.addRun(this.runInputs.testRunConfig.projectId, testRunOptions);
+        return await this.testRailClient.addRun(this.runInputs.testRunConfig.projectId, testRunOptions);
     }
     async closeTestRun(runId) {
-        return this.testRailClient.closeRun(runId);
+        return await this.testRailClient.closeRun(runId);
     }
     async getTestSuite() {
-        return this.testRailClient.getSuite(this.runInputs.testRunConfig.suiteId);
+        return await this.testRailClient.getSuite(this.runInputs.testRunConfig.suiteId);
     }
     async getMilestones() {
         // @ts-ignore because getMilestones response is typed incorrectly
         const milestoneFilters = { is_completed: 0 };
-        return this.testRailClient.getMilestones(this.runInputs.testRunConfig.projectId, milestoneFilters);
+        return await this.testRailClient.getMilestones(this.runInputs.testRunConfig.projectId, milestoneFilters);
     }
     async createMilestone(milestoneOptions) {
-        return this.testRailClient.addMilestone(this.runInputs.testRunConfig.projectId, milestoneOptions);
+        return await this.testRailClient.addMilestone(this.runInputs.testRunConfig.projectId, milestoneOptions);
     }
     async closeMilestone(milestone_id) {
-        return this.testRailClient.updateMilestone(milestone_id, {
+        return await this.testRailClient.updateMilestone(milestone_id, {
             is_completed: 1,
         });
     }
