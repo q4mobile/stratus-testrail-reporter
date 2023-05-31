@@ -44,6 +44,7 @@ export async function run(): Promise<void> {
     setOutput("completion_time", new Date().toTimeString());
     setOutput("test_runs", testRunConfigs); // output run_id for future steps
   } catch (error) {
+    console.log(error);
     setFailed(`Stratus TestRail Reporter encountered an issue: ${extractError(error)}`);
   }
 }
@@ -61,7 +62,7 @@ async function reportToTestrail(
     regressionMode,
     testRunConfig,
   };
-  const testrailService = new TestrailService(testRailOptions, runOptions);
+  const testrailService = await new TestrailService(testRailOptions, runOptions);
 
   const results = trunkMode
     ? await extractTestResults(testRunConfig.projectId, testRunConfig.suiteId)
