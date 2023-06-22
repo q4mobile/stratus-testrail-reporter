@@ -1,5 +1,5 @@
-function findDuplicates(inputArray: string[]): string[] {
-  const duplicates: string[] = [];
+function findDuplicates(inputArray: number[]): number[] {
+  const duplicates: number[] = [];
   const hashTable: { [key: string]: number } = {};
 
   inputArray.forEach((item) => {

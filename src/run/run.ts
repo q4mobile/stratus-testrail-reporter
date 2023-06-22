@@ -75,7 +75,7 @@ async function reportToTestrail(
   }
 
   // Ensure there are no duplicate case ids
-  const case_ids = results.map((result) => result.case_id as string); // TODO: Stronger typing for results
+  const case_ids = results.map((result) => result.case_id as number); // TODO: Stronger typing for results
   const duplicate_case_ids = findDuplicates(case_ids);
 
   if (duplicate_case_ids.length) {
@@ -128,7 +128,7 @@ async function reportToTestrail(
   }
 
   if (trunkMode) {
-    await testrailService.sweepUpTestRuns(milestone.id).catch((error) => {
+    await testrailService.sweepUpTestRuns(milestone.id, case_ids).catch((error) => {
       setFailed("TestRail Runs could not be closed.");
       throw error;
     });
