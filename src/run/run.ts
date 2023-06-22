@@ -1,5 +1,4 @@
 import { getBooleanInput, getInput, setFailed, setOutput } from "@actions/core";
-import { isEmpty } from "lodash";
 import moment from "moment-timezone";
 import { INewTestRun } from "testrail-api";
 import { extractError } from "../utils";
@@ -67,14 +66,15 @@ async function reportToTestrail(
     ? await extractTestResults(testRunConfig.projectId, testRunConfig.suiteId)
     : await extractTestResults();
 
-  if (isEmpty(results)) {
+  if (!results.length) {
     setFailed("No results for reporting to TestRail were found.");
     throw new Error();
   }
 
   const { body: suite } = await testrailService.getTestSuite();
 
-  if (isEmpty(suite)) {
+  if (!suite) {
+    // This should be unreachable. getTestSuite will throw if it fails to find a suite.
     setFailed("A TestRail Suite could not be found for the provided suite id.");
     throw new Error();
   }
@@ -86,8 +86,8 @@ async function reportToTestrail(
     // @ts-ignore because milestone_id is not required
     milestone_id: trunkMode || regressionMode ? milestone?.id : null,
     name: trunkMode
-      ? suite?.name
-      : `[${environment}][${suite?.name}][${moment()
+      ? suite.name
+      : `[${environment}][${suite.name}][${moment()
           .tz("America/New_York")
           .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
     include_all: true,
@@ -96,7 +96,7 @@ async function reportToTestrail(
   const testRun = await testrailService.establishTestRun(testRunOptions, results);
   testRunConfig.runId = testRun.id;
 
-  if (isEmpty(testRun)) {
+  if (!testRun) {
     setFailed("A TestRail Run could not be established.");
     throw new Error();
   }
