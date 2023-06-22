@@ -1,5 +1,6 @@
 export function extractError(error: any): string {
   if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
 
-  return error.error || error.message?.error || error.message || JSON.stringify(error);
+  return JSON.stringify(error);
 }
