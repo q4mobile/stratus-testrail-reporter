@@ -75,7 +75,7 @@ async function reportToTestrail(
   }
 
   // Ensure there are no duplicate case ids
-  const case_ids = results.map((result) => result.case_id as string);
+  const case_ids = results.map((result) => result.case_id as string); // TODO: Stronger typing for results
   const duplicate_case_ids = findDuplicates(case_ids);
 
   if (duplicate_case_ids.length) {
@@ -87,20 +87,21 @@ async function reportToTestrail(
     throw new Error();
   }
 
-  const { body: suite } = await testrailService.getTestSuite();
-
-  if (!suite) {
-    // This should be unreachable. getTestSuite will throw if it fails to find a suite.
+  const { body: suite } = await testrailService.getTestSuite().catch((error) => {
     setFailed("A TestRail Suite could not be found for the provided suite id.");
-    throw new Error();
-  }
+    throw error;
+  });
 
-  const milestone = await testrailService.establishMilestone();
+  const milestone = await testrailService.establishMilestone().catch((error) => {
+    setFailed("A TestRail Milestone could not be established.");
+    throw error;
+  });
+
   // @ts-ignore because the type for INewTestRun is incorrect
   const testRunOptions: INewTestRun = {
     suite_id: testRunConfig.suiteId,
     // @ts-ignore because milestone_id is not required
-    milestone_id: trunkMode || regressionMode ? milestone?.id : null,
+    milestone_id: trunkMode || regressionMode ? milestone.id : null,
     name: trunkMode
       ? suite.name
       : `[${environment}][${suite.name}][${moment()
@@ -109,25 +110,22 @@ async function reportToTestrail(
     include_all: true,
   };
 
-  const testRun = await testrailService.establishTestRun(testRunOptions, results);
-  testRunConfig.runId = testRun.id;
-
-  if (!testRun) {
+  const testRun = await testrailService.establishTestRun(testRunOptions, results).catch((error) => {
     setFailed("A TestRail Run could not be established.");
-    throw new Error();
-  }
+    throw error;
+  });
 
-  await testrailService.addTestRunResults(testRunConfig.runId, results);
+  await testrailService.addTestRunResults(testRun.id, results);
 
   if ((trunkMode && testRun.untested_count === 0) || (!trunkMode && !regressionMode)) {
-    await testrailService.closeTestRun(testRunConfig.runId);
+    await testrailService.closeTestRun(testRun.id);
   }
 
   if (trunkMode) {
-    await testrailService.sweepUpTestRuns(milestone?.id);
+    await testrailService.sweepUpTestRuns(milestone.id);
   }
 
-  if (environment === Environment.Production && suite?.name?.includes("E2E")) {
-    await testrailService.closeMilestone(milestone?.id);
+  if (environment === Environment.Production && suite.name.includes("E2E")) {
+    await testrailService.closeMilestone(milestone.id);
   }
 }
