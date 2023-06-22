@@ -3,7 +3,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const lodash_1 = require("lodash");
 const testrail_api_1 = __importDefault(require("testrail-api"));
 class TestrailService {
     constructor(testRailOptions, runInputs) {
@@ -54,8 +53,7 @@ class TestrailService {
             const { body: testRunsResponse } = await this.getTestRuns(testRunFilters);
             // @ts-ignore because the types for body are incorrect
             const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
-            const noTestRuns = (0, lodash_1.isEmpty)(testRuns);
-            if (noTestRuns) {
+            if (!testRuns.length) {
                 const { body: testRun } = await this.createTestRun({
                     ...testRunOptions,
                     // @ts-ignore because the type for INewMilestone is missing refs
@@ -65,7 +63,7 @@ class TestrailService {
             }
             // if a test run is to be returned, we need to reset the results
             const testRun = testRuns === null || testRuns === void 0 ? void 0 : testRuns[0];
-            await this.addTestRunResults(testRun === null || testRun === void 0 ? void 0 : testRun.id, results.map((currentResult) => ({
+            await this.testRailClient.addResultsForCases(testRun === null || testRun === void 0 ? void 0 : testRun.id, results.map((currentResult) => ({
                 ...currentResult,
                 status_id: 4,
                 comment: "Test result has been reset",
@@ -78,7 +76,7 @@ class TestrailService {
             return Promise.resolve(testRun);
         }
     }
-    async sweepUpTestRuns(milestone_id) {
+    async sweepUpTestRuns(milestone_id, case_ids) {
         var _a;
         if (!milestone_id)
             return Promise.reject();
@@ -86,40 +84,26 @@ class TestrailService {
         const { body: testRunsResponse } = await this.getTestRuns();
         // @ts-ignore because the types for body are incorrect
         const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
-        const noTestRuns = (0, lodash_1.isEmpty)(testRuns);
-        if (noTestRuns)
+        if (!testRuns.length)
             return Promise.resolve();
-        await this.attachTestRunsToMilestone(testRuns.filter((currentTestRun) => (currentTestRun === null || currentTestRun === void 0 ? void 0 : currentTestRun.milestone_id) === null), milestone_id).catch((error) => Promise.reject(error));
+        await this.attachTestRunsToMilestone(testRuns.filter((currentTestRun) => (currentTestRun === null || currentTestRun === void 0 ? void 0 : currentTestRun.milestone_id) === null), milestone_id, case_ids).catch((error) => Promise.reject(error));
         return Promise.resolve();
     }
     async addTestRunResults(runId, testRailResults) {
         return this.testRailClient.addResultsForCases(runId, testRailResults);
     }
-    async attachTestRunsToMilestone(runs, milestone_id) {
-        return new Promise((resolve, reject) => {
-            if (!(runs === null || runs === void 0 ? void 0 : runs.length))
-                resolve([]);
-            const promises = runs.map((run) => {
-                const { suite_id, name, description, assignedto_id, include_all } = run;
-                // @ts-ignore because the type for payload is incorrect
-                return this.testRailClient.updateRun(run.id, {
-                    ...run,
-                    suite_id,
-                    name,
-                    description,
-                    assignedto_id,
-                    include_all,
-                    milestone_id,
-                });
-            });
-            Promise.all(promises)
-                .then(() => {
-                resolve(runs);
-            })
-                .catch((error) => {
-                reject(error);
+    async attachTestRunsToMilestone(runs, milestone_id, case_ids) {
+        if (!runs.length)
+            return Promise.resolve([]);
+        const promises = runs.map((run) => {
+            return this.testRailClient.updateRun(run.id, {
+                ...run,
+                milestone_id,
+                case_ids,
             });
         });
+        await Promise.all(promises);
+        return Promise.resolve(runs);
     }
     async getCases(filters) {
         const caseFilters = {

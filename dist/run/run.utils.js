@@ -3,11 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.extractTestResults = exports.getTrunkTestRunConfigs = exports.extractFilePaths = void 0;
 const core_1 = require("@actions/core");
 const fs_1 = require("fs");
-const lodash_1 = require("lodash");
 function extractFilePaths(localFilePaths, projectIdPattern, suiteIdPattern) {
     const filePaths = [];
-    if ((0, lodash_1.isEmpty)(localFilePaths))
-        return filePaths;
+    if (!localFilePaths.length)
+        return [];
     const gitPattern = new RegExp(".*-?testrail-report.json");
     const trunkPattern = projectIdPattern &&
         suiteIdPattern &&
@@ -52,7 +51,7 @@ async function extractTestResults(projectId, suiteId) {
         fs_1.promises.readdir("./")
             .then((localFilePaths) => {
             const filePaths = extractFilePaths(localFilePaths, projectId === null || projectId === void 0 ? void 0 : projectId.toString(), suiteId === null || suiteId === void 0 ? void 0 : suiteId.toString());
-            if ((0, lodash_1.isEmpty)(filePaths))
+            if (!filePaths.length)
                 return Promise.resolve([]);
             const promises = filePaths.map((filePath) => {
                 return fs_1.promises
