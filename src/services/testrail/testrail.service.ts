@@ -1,4 +1,3 @@
-import { isEmpty } from "lodash";
 import TestRailApiClient, { ICase, ICaseFilters, INewMilestone, ISuite } from "testrail-api";
 import type {
   ITestRun,
@@ -73,9 +72,8 @@ export default class TestrailService {
       const { body: testRunsResponse } = await this.getTestRuns(testRunFilters);
       // @ts-ignore because the types for body are incorrect
       const testRuns = (testRunsResponse?.runs as ITestRun[]) ?? ([] as ITestRun[]);
-      const noTestRuns = isEmpty(testRuns);
 
-      if (noTestRuns) {
+      if (!testRuns.length) {
         const { body: testRun } = await this.createTestRun({
           ...testRunOptions,
           // @ts-ignore because the type for INewMilestone is missing refs
@@ -88,7 +86,7 @@ export default class TestrailService {
       // if a test run is to be returned, we need to reset the results
       const testRun = testRuns?.[0];
 
-      await this.addTestRunResults(
+      await this.testRailClient.addResultsForCases(
         testRun?.id,
         results.map((currentResult) => ({
           ...currentResult,
@@ -113,9 +111,8 @@ export default class TestrailService {
     const { body: testRunsResponse } = await this.getTestRuns();
     // @ts-ignore because the types for body are incorrect
     const testRuns = (testRunsResponse?.runs as ITestRun[]) ?? ([] as ITestRun[]);
-    const noTestRuns = isEmpty(testRuns);
 
-    if (noTestRuns) return Promise.resolve();
+    if (!testRuns.length) return Promise.resolve();
 
     await this.attachTestRunsToMilestone(
       testRuns.filter((currentTestRun) => currentTestRun?.milestone_id === null),
@@ -133,32 +130,19 @@ export default class TestrailService {
   }
 
   async attachTestRunsToMilestone(runs: ITestRun[], milestone_id: number): Promise<ITestRun[]> {
-    return new Promise((resolve, reject) => {
-      if (!runs?.length) resolve([]);
+    if (!runs.length) return Promise.resolve([]);
 
-      const promises = runs.map((run) => {
-        const { suite_id, name, description, assignedto_id, include_all } = run;
-
-        // @ts-ignore because the type for payload is incorrect
-        return this.testRailClient.updateRun(run.id, {
-          ...run,
-          suite_id,
-          name,
-          description,
-          assignedto_id,
-          include_all,
-          milestone_id,
-        });
+    const promises = runs.map((run) => {
+      return this.testRailClient.updateRun(run.id, {
+        ...run,
+        milestone_id,
+        case_ids: [], // Should case_ids be set to something?
       });
-
-      Promise.all(promises)
-        .then(() => {
-          resolve(runs);
-        })
-        .catch((error: any) => {
-          reject(error);
-        });
     });
+
+    await Promise.all(promises);
+
+    return Promise.resolve(runs);
   }
 
   async getCases(filters?: ICaseFilters): PromiseResponse<ICase[]> {
