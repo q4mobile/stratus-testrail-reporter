@@ -1,5 +1,4 @@
 import { getBooleanInput, getInput, setFailed, setOutput } from "@actions/core";
-import moment from "moment-timezone";
 import { INewTestRun } from "testrail-api";
 import { extractError } from "../utils";
 import { Environment, InputKey, RunInputs, TestRunConfig, TestRailOptions } from "./run.definition";
@@ -97,6 +96,16 @@ async function reportToTestrail(
     throw error;
   });
 
+  const datetime = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "America/Toronto",
+  }).format(new Date());
+
   // @ts-ignore because the type for INewTestRun is incorrect
   const testRunOptions: INewTestRun = {
     suite_id: testRunConfig.suiteId,
@@ -104,9 +113,7 @@ async function reportToTestrail(
     milestone_id: trunkMode || regressionMode ? milestone.id : null,
     name: trunkMode
       ? suite.name
-      : `[${environment}][${suite.name}][${moment()
-          .tz("America/New_York")
-          .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
+      : `[${environment}][${suite.name}][${datetime}] Automated Test Run`,
     include_all: true,
   };
 
