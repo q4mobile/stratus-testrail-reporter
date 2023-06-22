@@ -5,6 +5,7 @@ import { extractError } from "../utils";
 import { Environment, InputKey, RunInputs, TestRunConfig, TestRailOptions } from "./run.definition";
 import { extractTestResults, getTrunkTestRunConfigs } from "./run.utils";
 import { TestrailService } from "../services";
+import findDuplicates from "../utils/findDuplicate";
 
 const environment = process.env.NODE_ENV || "debug";
 export async function run(): Promise<void> {
@@ -23,6 +24,8 @@ export async function run(): Promise<void> {
     let testRunConfigs: TestRunConfig[];
 
     if (trunkMode) {
+      // TODO: Use glob pattern to find all testrail report files
+      // https://github.com/isaacs/node-glob#readme
       testRunConfigs = await getTrunkTestRunConfigs();
 
       for (const testRun of testRunConfigs) {
@@ -68,6 +71,19 @@ async function reportToTestrail(
 
   if (!results.length) {
     setFailed("No results for reporting to TestRail were found.");
+    throw new Error();
+  }
+
+  // Ensure there are no duplicate case ids
+  const case_ids = results.map((result) => result.case_id as string);
+  const duplicate_case_ids = findDuplicates(case_ids);
+
+  if (duplicate_case_ids.length) {
+    setFailed(
+      `Duplicate case ids found in test results: ${duplicate_case_ids.join(
+        ", "
+      )}. Please ensure that each test case is only reported once.`
+    );
     throw new Error();
   }
 
