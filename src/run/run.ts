@@ -115,17 +115,29 @@ async function reportToTestrail(
     throw error;
   });
 
-  await testrailService.addTestRunResults(testRun.id, results);
+  await testrailService.addTestRunResults(testRun.id, results).catch((error) => {
+    setFailed("Test run results could not be added to the TestRail Run.");
+    throw error;
+  });
 
   if ((trunkMode && testRun.untested_count === 0) || (!trunkMode && !regressionMode)) {
-    await testrailService.closeTestRun(testRun.id);
+    await testrailService.closeTestRun(testRun.id).catch((error) => {
+      setFailed("The TestRail Run could not be closed.");
+      throw error;
+    });
   }
 
   if (trunkMode) {
-    await testrailService.sweepUpTestRuns(milestone.id);
+    await testrailService.sweepUpTestRuns(milestone.id).catch((error) => {
+      setFailed("TestRail Runs could not be closed.");
+      throw error;
+    });
   }
 
   if (environment === Environment.Production && suite.name.includes("E2E")) {
-    await testrailService.closeMilestone(milestone.id);
+    await testrailService.closeMilestone(milestone.id).catch((error) => {
+      setFailed("The TestRail Milestone could not be closed.");
+      throw error;
+    });
   }
 }
