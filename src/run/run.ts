@@ -23,7 +23,7 @@ export async function run(): Promise<void> {
     let testRunConfigs: TestRunConfig[];
 
     if (trunkMode) {
-      // TODO: Use glob pattern to find all testrail report files
+      // TODO: Use glob pattern to find the testrail report file
       // https://github.com/isaacs/node-glob#readme
       testRunConfigs = await getTrunkTestRunConfigs();
 
