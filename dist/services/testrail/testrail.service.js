@@ -76,7 +76,7 @@ class TestrailService {
             return Promise.resolve(testRun);
         }
     }
-    async sweepUpTestRuns(milestone_id, case_ids) {
+    async sweepUpTestRuns(milestone_id) {
         var _a;
         if (!milestone_id)
             return Promise.reject();
@@ -86,20 +86,20 @@ class TestrailService {
         const testRuns = (_a = testRunsResponse === null || testRunsResponse === void 0 ? void 0 : testRunsResponse.runs) !== null && _a !== void 0 ? _a : [];
         if (!testRuns.length)
             return Promise.resolve();
-        await this.attachTestRunsToMilestone(testRuns.filter((currentTestRun) => (currentTestRun === null || currentTestRun === void 0 ? void 0 : currentTestRun.milestone_id) === null), milestone_id, case_ids).catch((error) => Promise.reject(error));
+        await this.attachTestRunsToMilestone(testRuns.filter((currentTestRun) => (currentTestRun === null || currentTestRun === void 0 ? void 0 : currentTestRun.milestone_id) === null), milestone_id).catch((error) => Promise.reject(error));
         return Promise.resolve();
     }
     async addTestRunResults(runId, testRailResults) {
         return this.testRailClient.addResultsForCases(runId, testRailResults);
     }
-    async attachTestRunsToMilestone(runs, milestone_id, case_ids) {
+    async attachTestRunsToMilestone(runs, milestone_id) {
         if (!runs.length)
             return Promise.resolve([]);
         const promises = runs.map((run) => {
+            // @ts-ignore because case_ids aren't actually required
             return this.testRailClient.updateRun(run.id, {
                 ...run,
                 milestone_id,
-                case_ids,
             });
         });
         await Promise.all(promises);

@@ -135,7 +135,7 @@ async function reportToTestrail(
   }
 
   if (trunkMode) {
-    await testrailService.sweepUpTestRuns(milestone.id, case_ids).catch((error) => {
+    await testrailService.sweepUpTestRuns(milestone.id).catch((error) => {
       setFailed("TestRail Runs could not be closed.");
       throw error;
     });

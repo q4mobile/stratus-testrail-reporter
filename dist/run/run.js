@@ -25,7 +25,7 @@ async function run() {
     try {
         let testRunConfigs;
         if (trunkMode) {
-            // TODO: Use glob pattern to find all testrail report files
+            // TODO: Use glob pattern to find the testrail report file
             // https://github.com/isaacs/node-glob#readme
             testRunConfigs = await (0, run_utils_1.getTrunkTestRunConfigs)();
             for (const testRun of testRunConfigs) {
@@ -108,7 +108,7 @@ async function reportToTestrail(jiraKey, trunkMode, regressionMode, testRunConfi
         });
     }
     if (trunkMode) {
-        await testrailService.sweepUpTestRuns(milestone.id, case_ids).catch((error) => {
+        await testrailService.sweepUpTestRuns(milestone.id).catch((error) => {
             (0, core_1.setFailed)("TestRail Runs could not be closed.");
             throw error;
         });

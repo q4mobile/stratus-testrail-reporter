@@ -104,7 +104,7 @@ export default class TestrailService {
     }
   }
 
-  async sweepUpTestRuns(milestone_id: number, case_ids: number[]): Promise<void> {
+  async sweepUpTestRuns(milestone_id: number): Promise<void> {
     if (!milestone_id) return Promise.reject();
 
     // find test runs for this jira key that might be loose (exploratory testing) and sweep then up
@@ -116,8 +116,7 @@ export default class TestrailService {
 
     await this.attachTestRunsToMilestone(
       testRuns.filter((currentTestRun) => currentTestRun?.milestone_id === null),
-      milestone_id,
-      case_ids
+      milestone_id
     ).catch((error) => Promise.reject(error));
 
     return Promise.resolve();
@@ -130,18 +129,14 @@ export default class TestrailService {
     return this.testRailClient.addResultsForCases(runId, testRailResults);
   }
 
-  async attachTestRunsToMilestone(
-    runs: ITestRun[],
-    milestone_id: number,
-    case_ids: number[]
-  ): Promise<ITestRun[]> {
+  async attachTestRunsToMilestone(runs: ITestRun[], milestone_id: number): Promise<ITestRun[]> {
     if (!runs.length) return Promise.resolve([]);
 
     const promises = runs.map((run) => {
+      // @ts-ignore because case_ids aren't actually required
       return this.testRailClient.updateRun(run.id, {
         ...run,
         milestone_id,
-        case_ids,
       });
     });
 
