@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "jest --watchAll=true",
-    "build": "ncc build --minify"
+    "build": "ncc build --minify",
+    "all": "npm run build"
   },
   "dependencies": {
     "@actions/core": "^1.10.0",
