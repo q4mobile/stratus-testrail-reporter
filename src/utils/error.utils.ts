@@ -1,7 +1,6 @@
-import { isEmpty } from "lodash";
-
 export function extractError(error: any): string {
-  if (isEmpty(error)) return "An error is present, but could not be parsed";
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
 
-  return error.error || error.message?.error || error.message || JSON.stringify(error);
+  return JSON.stringify(error);
 }

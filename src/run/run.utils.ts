@@ -1,6 +1,5 @@
 import { setFailed, error as logError } from "@actions/core";
 import { promises as fs } from "fs";
-import { isEmpty } from "lodash";
 import type { INewTestResult } from "testrail-api";
 import type { TestRunConfig } from "./run.definition";
 
@@ -11,7 +10,7 @@ export function extractFilePaths(
 ): string[] {
   const filePaths: string[] = [];
 
-  if (isEmpty(localFilePaths)) return filePaths;
+  if (!localFilePaths.length) return [];
 
   const gitPattern = new RegExp(".*-?testrail-report.json");
   const trunkPattern =
@@ -71,7 +70,7 @@ export async function extractTestResults(
           suiteId?.toString()
         );
 
-        if (isEmpty(filePaths)) return Promise.resolve([]);
+        if (!filePaths.length) return Promise.resolve([]);
 
         const promises = filePaths.map((filePath) => {
           return fs

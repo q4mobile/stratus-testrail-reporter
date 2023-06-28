@@ -1,11 +1,10 @@
 import { getBooleanInput, getInput, setFailed, setOutput } from "@actions/core";
-import { isEmpty } from "lodash";
-import moment from "moment-timezone";
 import { INewTestRun } from "testrail-api";
 import { extractError } from "../utils";
 import { Environment, InputKey, RunInputs, TestRunConfig, TestRailOptions } from "./run.definition";
 import { extractTestResults, getTrunkTestRunConfigs } from "./run.utils";
 import { TestrailService } from "../services";
+import findDuplicates from "../utils/findDuplicate";
 
 const environment = process.env.NODE_ENV || "debug";
 export async function run(): Promise<void> {
@@ -24,6 +23,8 @@ export async function run(): Promise<void> {
     let testRunConfigs: TestRunConfig[];
 
     if (trunkMode) {
+      // TODO: Use glob pattern to find the testrail report file
+      // https://github.com/isaacs/node-glob#readme
       testRunConfigs = await getTrunkTestRunConfigs();
 
       for (const testRun of testRunConfigs) {
@@ -67,51 +68,83 @@ async function reportToTestrail(
     ? await extractTestResults(testRunConfig.projectId, testRunConfig.suiteId)
     : await extractTestResults();
 
-  if (isEmpty(results)) {
+  if (!results.length) {
     setFailed("No results for reporting to TestRail were found.");
     throw new Error();
   }
 
-  const { body: suite } = await testrailService.getTestSuite();
+  // Ensure there are no duplicate case ids
+  const case_ids = results.map((result) => result.case_id as number); // TODO: Stronger typing for results
+  const duplicate_case_ids = findDuplicates(case_ids);
 
-  if (isEmpty(suite)) {
-    setFailed("A TestRail Suite could not be found for the provided suite id.");
+  if (duplicate_case_ids.length) {
+    setFailed(
+      `Duplicate case ids found in test results: ${duplicate_case_ids.join(
+        ", "
+      )}. Please ensure that each test case is only reported once.`
+    );
     throw new Error();
   }
 
-  const milestone = await testrailService.establishMilestone();
+  const { body: suite } = await testrailService.getTestSuite().catch((error) => {
+    setFailed("A TestRail Suite could not be found for the provided suite id.");
+    throw error;
+  });
+
+  const milestone = await testrailService.establishMilestone().catch((error) => {
+    setFailed("A TestRail Milestone could not be established.");
+    throw error;
+  });
+
+  const datetime = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "America/Toronto",
+  }).format(new Date());
+
   // @ts-ignore because the type for INewTestRun is incorrect
   const testRunOptions: INewTestRun = {
     suite_id: testRunConfig.suiteId,
     // @ts-ignore because milestone_id is not required
-    milestone_id: trunkMode || regressionMode ? milestone?.id : null,
+    milestone_id: trunkMode || regressionMode ? milestone.id : null,
     name: trunkMode
-      ? suite?.name
-      : `[${environment}][${suite?.name}][${moment()
-          .tz("America/New_York")
-          .format("YYYY-MM-DD h:mm:ss")}] Automated Test Run`,
+      ? suite.name
+      : `[${environment}][${suite.name}][${datetime}] Automated Test Run`,
     include_all: true,
   };
 
-  const testRun = await testrailService.establishTestRun(testRunOptions, results);
-  testRunConfig.runId = testRun.id;
-
-  if (isEmpty(testRun)) {
+  const testRun = await testrailService.establishTestRun(testRunOptions, results).catch((error) => {
     setFailed("A TestRail Run could not be established.");
-    throw new Error();
-  }
+    throw error;
+  });
 
-  await testrailService.addTestRunResults(testRunConfig.runId, results);
+  await testrailService.addTestRunResults(testRun.id, results).catch((error) => {
+    setFailed("Test run results could not be added to the TestRail Run.");
+    throw error;
+  });
 
   if ((trunkMode && testRun.untested_count === 0) || (!trunkMode && !regressionMode)) {
-    await testrailService.closeTestRun(testRunConfig.runId);
+    await testrailService.closeTestRun(testRun.id).catch((error) => {
+      setFailed("The TestRail Run could not be closed.");
+      throw error;
+    });
   }
 
   if (trunkMode) {
-    await testrailService.sweepUpTestRuns(milestone?.id);
+    await testrailService.sweepUpTestRuns(milestone.id).catch((error) => {
+      setFailed("TestRail Runs could not be closed.");
+      throw error;
+    });
   }
 
-  if (environment === Environment.Production && suite?.name?.includes("E2E")) {
-    await testrailService.closeMilestone(milestone?.id);
+  if (environment === Environment.Production && suite.name.includes("E2E")) {
+    await testrailService.closeMilestone(milestone.id).catch((error) => {
+      setFailed("The TestRail Milestone could not be closed.");
+      throw error;
+    });
   }
 }
