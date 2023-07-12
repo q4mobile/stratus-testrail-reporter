@@ -22,14 +22,10 @@ inputs:
   suite_id:
     required: false
     description: The suite ID of the Testrail project
-  current_branch:
-    required: false
-    description: Used to determine the related tests, e.g., QP-XXX
-    default: ""
   report_results:
     required: false
     description: A boolean to report results to the presenter
-    default: false
+    default: "false"
 outputs:
   test_runs:
     value: ${{ steps.report.outputs.test_runs }}
@@ -38,10 +34,18 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: find_pull_request
+      uses: juliangruber/find-pull-request-action@v1.8.0
+      id: find_pull_request
+      with:
+        branch: ${{ github.ref_name }}
+
     - id: jira-key-match
       uses: q4mobile/action-regex-match@v2.0.2-q4-0.0.1
       with:
-        text: ${{ github.event.pull_request.title || github.event.head_commit.message }}
+        #Feature Branch uses pull request title: steps.find_pull_request.outputs.title
+        #Main Branch uses commit message: github.event.head_commit.message
+        text: ${{ steps.find_pull_request.outputs.title || github.event.head_commit.message }}
         regex: '(?<=(feat|fix|docs|style|refactor|perf|test|chore)\()[^)]+(?=\))'
         flags: gm
 
@@ -50,7 +54,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-reporter
         path: ./.github/actions/stratus-testrail-reporter
-        ref: v12
+        ref: v12.1
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
@@ -73,4 +77,4 @@ runs:
         network_url: ${{ inputs.network_url }}
         test_runs: ${{ steps.report.outputs.test_runs }}
         username: ${{ inputs.username }}
-        current_branch: ${{ inputs.current_branch }}
+        current_branch: ${{ github.ref_name }}
