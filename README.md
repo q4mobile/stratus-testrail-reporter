@@ -56,6 +56,9 @@ The project ID of the TestRail project.
 ##### `suite_id` (**Required**)
 The suite ID of the TestRail project. Does not include "S" prefix.
 
+##### `exclude_e2e` (**Optional**)
+Used in projects that don't require nightwatch testing like in EDS. When true will close milestones regardless of E2E reports.
+
 ## Outputs
 
 ##### `run_id`
