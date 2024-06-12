@@ -26,6 +26,11 @@ inputs:
     required: false
     description: A boolean to report results to the presenter
     default: "false"
+  exclude_e2e:
+    description: Used in projects that don't require nightwatch testing like in EDS. When true will close milestones regardless of E2E reports.
+    required: false
+    type: boolean
+    default: false
 outputs:
   test_runs:
     value: ${{ steps.report.outputs.test_runs }}
@@ -54,7 +59,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-reporter
         path: ./.github/actions/stratus-testrail-reporter
-        ref: v12.1
+        ref: v12.2
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
@@ -68,6 +73,7 @@ runs:
         project_id: ${{ inputs.project_id }}
         suite_id: ${{ inputs.suite_id }}
         jira_key: ${{ steps.jira-key-match.outputs.match }}
+        exclude_e2e: ${{ inputs.exclude_e2e }}
 
     - if: inputs.report_results == 'true'
       id: result

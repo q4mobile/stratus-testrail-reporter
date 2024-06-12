@@ -16,6 +16,7 @@ export enum InputKey {
   TargetBranch = "target_branch",
   ProjectId = "project_id",
   SuiteId = "suite_id",
+  ExcludeE2E = "exclude_e2e",
 }
 
 export type TestRunConfig = {

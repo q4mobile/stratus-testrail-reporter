@@ -8,6 +8,7 @@ import findDuplicates from "../utils/findDuplicate";
 
 const environment = process.env.NODE_ENV || "debug";
 export async function run(): Promise<void> {
+  const excludeE2E = getBooleanInput(InputKey.ExcludeE2E);
   const jiraKey = getInput(InputKey.JiraKey);
   const regressionMode = getBooleanInput(InputKey.RegressionMode);
   const projectId = parseInt(getInput(InputKey.ProjectId), 10);
@@ -28,12 +29,13 @@ export async function run(): Promise<void> {
       testRunConfigs = await getTrunkTestRunConfigs();
 
       for (const testRun of testRunConfigs) {
-        await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
+        await reportToTestrail(excludeE2E, jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
       }
     } else {
       testRunConfigs = [{ projectId: projectId, suiteId: suiteId }];
 
       await reportToTestrail(
+        excludeE2E,
         jiraKey,
         trunkMode,
         regressionMode,
@@ -50,6 +52,7 @@ export async function run(): Promise<void> {
 }
 
 async function reportToTestrail(
+  excludeE2E: boolean,
   jiraKey: string,
   trunkMode: boolean,
   regressionMode: boolean,
@@ -141,7 +144,7 @@ async function reportToTestrail(
     });
   }
 
-  if (environment === Environment.Production && suite.name.includes("E2E")) {
+  if (environment === Environment.Production && (suite.name.includes("E2E") || excludeE2E)) {
     await testrailService.closeMilestone(milestone.id).catch((error) => {
       setFailed("The TestRail Milestone could not be closed.");
       throw error;

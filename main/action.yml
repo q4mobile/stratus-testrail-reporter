@@ -23,6 +23,11 @@ inputs:
   suite_id:
     required: false
     description: The suite ID of the Testrail project
+  exclude_e2e:
+    description: Used in projects that don't require nightwatch testing like in EDS. When true will close milestones regardless of E2E reports.
+    required: false
+    type: boolean
+    default: false
 outputs:
   test_runs:
     description: The result of the test runs
