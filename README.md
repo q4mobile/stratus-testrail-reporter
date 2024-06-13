@@ -56,6 +56,9 @@ The project ID of the TestRail project.
 ##### `suite_id` (**Required**)
 The suite ID of the TestRail project. Does not include "S" prefix.
 
+##### `close_milestone` (**Optional**)
+Make sure testrail milestone will get closed after production pipeline is completed.
+
 ## Outputs
 
 ##### `run_id`

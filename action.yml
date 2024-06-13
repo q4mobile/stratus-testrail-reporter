@@ -26,6 +26,11 @@ inputs:
     required: false
     description: A boolean to report results to the presenter
     default: "false"
+  close_milestone:
+    description: Make sure testrail milestone will get closed after production pipeline is completed.
+    required: false
+    type: boolean
+    default: false
 outputs:
   test_runs:
     value: ${{ steps.report.outputs.test_runs }}
@@ -54,7 +59,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-reporter
         path: ./.github/actions/stratus-testrail-reporter
-        ref: v12.1
+        ref: v12.2
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
@@ -68,6 +73,7 @@ runs:
         project_id: ${{ inputs.project_id }}
         suite_id: ${{ inputs.suite_id }}
         jira_key: ${{ steps.jira-key-match.outputs.match }}
+        close_milestone: ${{ inputs.close_milestone }}
 
     - if: inputs.report_results == 'true'
       id: result
