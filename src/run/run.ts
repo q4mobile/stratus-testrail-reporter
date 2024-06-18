@@ -2,12 +2,13 @@ import { getBooleanInput, getInput, setFailed, setOutput } from "@actions/core";
 import { INewTestRun } from "testrail-api";
 import { extractError } from "../utils";
 import { Environment, InputKey, RunInputs, TestRunConfig, TestRailOptions } from "./run.definition";
-import { extractTestResults, getTrunkTestRunConfigs } from "./run.utils";
+import { containsE2Etest, extractTestResults, getTrunkTestRunConfigs, getUnitTestConfig } from "./run.utils";
 import { TestrailService } from "../services";
 import findDuplicates from "../utils/findDuplicate";
 
 const environment = process.env.NODE_ENV || "debug";
 export async function run(): Promise<void> {
+  const closeMilestone = getBooleanInput(InputKey.CloseMilestone);
   const jiraKey = getInput(InputKey.JiraKey);
   const regressionMode = getBooleanInput(InputKey.RegressionMode);
   const projectId = parseInt(getInput(InputKey.ProjectId), 10);
@@ -23,17 +24,39 @@ export async function run(): Promise<void> {
     let testRunConfigs: TestRunConfig[];
 
     if (trunkMode) {
-      // TODO: Use glob pattern to find the testrail report file
-      // https://github.com/isaacs/node-glob#readme
-      testRunConfigs = await getTrunkTestRunConfigs();
-
-      for (const testRun of testRunConfigs) {
-        await reportToTestrail(jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
+      const containsE2E = await containsE2Etest();
+      if (!containsE2E && environment === Environment.Production) {
+        testRunConfigs = [await getUnitTestConfig()];
+        const runOptions: RunInputs = {
+          jiraKey,
+          trunkMode,
+          regressionMode,
+          testRunConfig: testRunConfigs[0],
+        };
+        const testrailService = new TestrailService(testRailOptions, runOptions);
+        // get the milestone created in the build/test-unit job
+        const milestone = await testrailService.establishMilestone().catch((error) => {
+          setFailed("A TestRail Milestone could not be established.");
+          throw error;
+        });
+        // and close it
+        await testrailService.closeMilestone(milestone.id).catch((error) => {
+          setFailed("The TestRail Milestone could not be closed.");
+          throw error;
+        });
+      } else {
+        // TODO: Use glob pattern to find the testrail report file
+        // https://github.com/isaacs/node-glob#readme
+        testRunConfigs = await getTrunkTestRunConfigs();
+        for (const testRun of testRunConfigs) {
+          await reportToTestrail(closeMilestone, jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
+        }
       }
     } else {
       testRunConfigs = [{ projectId: projectId, suiteId: suiteId }];
 
       await reportToTestrail(
+        closeMilestone,
         jiraKey,
         trunkMode,
         regressionMode,
@@ -50,6 +73,7 @@ export async function run(): Promise<void> {
 }
 
 async function reportToTestrail(
+  closeMilestone: boolean,
   jiraKey: string,
   trunkMode: boolean,
   regressionMode: boolean,
@@ -141,7 +165,7 @@ async function reportToTestrail(
     });
   }
 
-  if (environment === Environment.Production) {
+  if (environment === Environment.Production && (suite.name.includes("E2E") || closeMilestone)) {
     await testrailService.closeMilestone(milestone.id).catch((error) => {
       setFailed("The TestRail Milestone could not be closed.");
       throw error;
