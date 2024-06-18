@@ -16,7 +16,6 @@ export enum InputKey {
   TargetBranch = "target_branch",
   ProjectId = "project_id",
   SuiteId = "suite_id",
-  CloseMilestone = "close_milestone",
 }
 
 export type TestRunConfig = {
