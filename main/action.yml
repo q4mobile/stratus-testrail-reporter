@@ -23,11 +23,6 @@ inputs:
   suite_id:
     required: false
     description: The suite ID of the Testrail project
-  close_milestone:
-    description: Make sure testrail milestone will get closed after production pipeline is completed.
-    required: false
-    type: boolean
-    default: false
 outputs:
   test_runs:
     description: The result of the test runs
