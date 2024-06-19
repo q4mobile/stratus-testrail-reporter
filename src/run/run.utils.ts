@@ -63,26 +63,27 @@ export interface TestsSuite {
 export async function containsE2Etest(): Promise<boolean> {
   return fs.readFile("./package.json", "utf-8").then((buffer) => {
     const packageJsonContent = JSON.parse(buffer.toString());
-    return Promise.resolve(Boolean(packageJsonContent.testrail.e2e));
+    return Promise.resolve(Boolean(packageJsonContent?.testrail?.e2e));
   }).catch((error: any) => {
     logError(`Reading file system has failed:: ${error.message}`);
     return Promise.resolve(true);
   });
 }
 
-export async function getUnitTestConfig(): Promise<TestRunConfig> {
+export async function getUnitTestConfig(): Promise<TestRunConfig | null> {
   return fs.readFile("./package.json", "utf-8").then((buffer) => {
     const packageJsonContent = JSON.parse(buffer.toString());
-    return Promise.resolve({
-      projectId: packageJsonContent.testrail.unit.project_id,
-      suiteId: packageJsonContent.testrail.unit.suite_id
-    } as TestRunConfig);
+    if (packageJsonContent?.testrail?.unit) {
+      return Promise.resolve({
+        projectId: packageJsonContent?.testrail?.unit.project_id,
+        suiteId: packageJsonContent?.testrail?.unit.suite_id
+      } as TestRunConfig);
+    } else {
+      return Promise.resolve(null);
+    }
   }).catch((error: any) => {
     logError(`Reading file system has failed:: ${error.message}`);
-    return Promise.resolve({
-      projectId: 0,
-      suiteId: 0
-    });
+    return Promise.resolve(null);
   });
 }
 
