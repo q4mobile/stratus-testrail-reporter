@@ -6,6 +6,32 @@ import { containsE2Etest, extractTestResults, getTrunkTestRunConfigs, getUnitTes
 import { TestrailService } from "../services";
 import findDuplicates from "../utils/findDuplicate";
 
+async function closeMilestoneWithOnlyUnitTest(
+  jiraKey: string,
+  trunkMode: boolean,
+  regressionMode: boolean,
+  testRunConfig: TestRunConfig,
+  testRailOptions: TestRailOptions
+) {
+  const runOptions: RunInputs = {
+    jiraKey,
+    trunkMode,
+    regressionMode,
+    testRunConfig,
+  };
+  const testrailService = new TestrailService(testRailOptions, runOptions);
+  // get the milestone created in the build/test-unit job
+  const milestone = await testrailService.establishMilestone().catch((error) => {
+    setFailed("A TestRail Milestone could not be established.");
+    throw error;
+  });
+  // and close it
+  await testrailService.closeMilestone(milestone.id).catch((error) => {
+    setFailed("The TestRail Milestone could not be closed.");
+    throw error;
+  });
+}
+
 const environment = process.env.NODE_ENV || "debug";
 export async function run(): Promise<void> {
   const closeMilestone = getBooleanInput(InputKey.CloseMilestone);
@@ -27,23 +53,7 @@ export async function run(): Promise<void> {
       const containsE2E = await containsE2Etest();
       if (!containsE2E && environment === Environment.Production) {
         testRunConfigs = [await getUnitTestConfig()];
-        const runOptions: RunInputs = {
-          jiraKey,
-          trunkMode,
-          regressionMode,
-          testRunConfig: testRunConfigs[0],
-        };
-        const testrailService = new TestrailService(testRailOptions, runOptions);
-        // get the milestone created in the build/test-unit job
-        const milestone = await testrailService.establishMilestone().catch((error) => {
-          setFailed("A TestRail Milestone could not be established.");
-          throw error;
-        });
-        // and close it
-        await testrailService.closeMilestone(milestone.id).catch((error) => {
-          setFailed("The TestRail Milestone could not be closed.");
-          throw error;
-        });
+        await closeMilestoneWithOnlyUnitTest(jiraKey, trunkMode, regressionMode, testRunConfigs[0], testRailOptions);
       } else {
         // TODO: Use glob pattern to find the testrail report file
         // https://github.com/isaacs/node-glob#readme
