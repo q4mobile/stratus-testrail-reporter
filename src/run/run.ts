@@ -34,6 +34,9 @@ async function closeMilestoneWithOnlyUnitTest(
 
 const environment = process.env.NODE_ENV || "debug";
 export async function run(): Promise<void> {
+  console.log('log');
+  console.debug('debug');
+  console.error('err');
   const closeMilestone = getBooleanInput(InputKey.CloseMilestone);
   const jiraKey = getInput(InputKey.JiraKey);
   const regressionMode = getBooleanInput(InputKey.RegressionMode);
