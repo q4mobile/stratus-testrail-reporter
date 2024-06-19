@@ -51,8 +51,11 @@ export async function run(): Promise<void> {
 
     if (trunkMode) {
       const containsE2E = await containsE2Etest();
+      console.log(containsE2E);
+      testRunConfigs = [await getUnitTestConfig()];
+      console.log(testRunConfigs);
+      console.log(environment);
       if (!containsE2E && environment === Environment.Production) {
-        testRunConfigs = [await getUnitTestConfig()];
         await closeMilestoneWithOnlyUnitTest(jiraKey, trunkMode, regressionMode, testRunConfigs[0], testRailOptions);
       } else {
         // TODO: Use glob pattern to find the testrail report file

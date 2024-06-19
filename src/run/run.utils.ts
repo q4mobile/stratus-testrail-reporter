@@ -61,8 +61,12 @@ export interface TestsSuite {
 }
 
 export async function containsE2Etest(): Promise<boolean> {
+  console.log('containsE2Etest:');
   return fs.readFile("./package.json", "utf-8").then((buffer) => {
     const packageJsonContent = JSON.parse(buffer.toString());
+    console.log('================');
+    console.log(packageJsonContent);
+    console.log('================');
     return Promise.resolve(Boolean(packageJsonContent.testrail.e2e));
   }).catch((error: any) => {
     logError(`Reading file system has failed:: ${error.message}`);
@@ -71,6 +75,7 @@ export async function containsE2Etest(): Promise<boolean> {
 }
 
 export async function getUnitTestConfig(): Promise<TestRunConfig> {
+  console.log('getUnitTestConfig:');
   return fs.readFile("./package.json", "utf-8").then((buffer) => {
     const packageJsonContent = JSON.parse(buffer.toString());
     return Promise.resolve({
