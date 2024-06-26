@@ -2,7 +2,12 @@ import { getBooleanInput, getInput, setFailed, setOutput } from "@actions/core";
 import { INewTestRun } from "testrail-api";
 import { extractError } from "../utils";
 import { Environment, InputKey, RunInputs, TestRunConfig, TestRailOptions } from "./run.definition";
-import { containsE2Etest, extractTestResults, getTrunkTestRunConfigs, getUnitTestConfig } from "./run.utils";
+import {
+  containsE2Etest,
+  extractTestResults,
+  getTrunkTestRunConfigs,
+  getUnitTestConfig,
+} from "./run.utils";
 import { TestrailService } from "../services";
 import findDuplicates from "../utils/findDuplicate";
 
@@ -28,13 +33,26 @@ export async function run(): Promise<void> {
       const unitTestConfig = await getUnitTestConfig();
       if (unitTestConfig && !containsE2E && environment === Environment.Production) {
         testRunConfigs = [unitTestConfig];
-        await closeMilestoneWithOnlyUnitTest(jiraKey, trunkMode, regressionMode, testRunConfigs[0], testRailOptions);
+        await closeMilestoneWithOnlyUnitTest(
+          jiraKey,
+          trunkMode,
+          regressionMode,
+          testRunConfigs[0],
+          testRailOptions
+        );
       } else {
         // TODO: Use glob pattern to find the testrail report file
         // https://github.com/isaacs/node-glob#readme
         testRunConfigs = await getTrunkTestRunConfigs();
         for (const testRun of testRunConfigs) {
-          await reportToTestrail(closeMilestone, jiraKey, trunkMode, regressionMode, testRun, testRailOptions);
+          await reportToTestrail(
+            closeMilestone,
+            jiraKey,
+            trunkMode,
+            regressionMode,
+            testRun,
+            testRailOptions
+          );
         }
       }
     } else {
@@ -71,13 +89,20 @@ async function closeMilestoneWithOnlyUnitTest(
     testRunConfig,
   };
   const testrailService = new TestrailService(testRailOptions, runOptions);
+
   // get the milestone created in the build/test-unit job
   const milestone = await testrailService.establishMilestone().catch((error) => {
     setFailed("A TestRail Milestone could not be established.");
     throw error;
   });
+
+  if (!milestone) {
+    setFailed("A TestRail Milestone could not be established.");
+    throw new Error();
+  }
+
   // and close it
-  await testrailService.closeMilestone(milestone.id).catch((error) => {
+  await testrailService.closeMilestone(milestone?.id).catch((error) => {
     setFailed("The TestRail Milestone could not be closed.");
     throw error;
   });
@@ -130,6 +155,11 @@ async function reportToTestrail(
     setFailed("A TestRail Milestone could not be established.");
     throw error;
   });
+
+  if (!milestone) {
+    setFailed("A TestRail Milestone could not be established.");
+    throw new Error();
+  }
 
   const datetime = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",

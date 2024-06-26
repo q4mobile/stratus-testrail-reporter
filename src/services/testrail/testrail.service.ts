@@ -23,18 +23,33 @@ export default class TestrailService {
     this.runInputs = runInputs;
   }
 
-  async establishMilestone(): Promise<IMilestone> {
+  async establishMilestone(): Promise<IMilestone | undefined> {
     const { body: milestonesResponse } = await this.getMilestones();
     // @ts-ignore because the types for body are not correct
     const milestones = (milestonesResponse?.milestones as IMilestone[]) ?? ([] as IMilestone[]);
-    let milestone: IMilestone;
+    let milestone: IMilestone | undefined;
 
     if (this.runInputs.trunkMode) {
-      // if we're in trunk mode, we want a milestone per JIRA key, so if we can't find it, we make it
-      milestone = milestones?.filter?.((currentMilestone) => {
+      // Check if the current milestone or any of its child milestones match the jiraKey
+      for (const currentMilestone of milestones ?? []) {
         // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
-        return currentMilestone?.refs?.includes?.(this.runInputs.jiraKey);
-      })?.[0];
+        if (currentMilestone?.refs?.includes(this.runInputs.jiraKey)) {
+          milestone = currentMilestone;
+          break;
+        }
+
+        for (const childMilestone of currentMilestone?.milestones ?? []) {
+          // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
+          if (childMilestone?.refs?.includes(this.runInputs.jiraKey)) {
+            milestone = childMilestone;
+            break;
+          }
+        }
+
+        if (milestone) {
+          break;
+        }
+      }
     } else {
       // if we're in git mode, we simply want to grab the latest milestone
       // if we're in regression mode, we'll also create a new milestone if one is not found
