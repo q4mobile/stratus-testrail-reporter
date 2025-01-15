@@ -59,7 +59,7 @@ runs:
       with:
         repository: q4mobile/stratus-testrail-reporter
         path: ./.github/actions/stratus-testrail-reporter
-        ref: v12.2
+        ref: v13.0
 
     - uses: ./.github/actions/stratus-testrail-reporter/main
       id: report
