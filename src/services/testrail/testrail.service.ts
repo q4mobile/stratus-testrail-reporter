@@ -25,6 +25,10 @@ export default class TestrailService {
 
   async establishMilestone(): Promise<IMilestone | undefined> {
     const { body: milestonesResponse } = await this.getMilestones();
+
+    console.log("milestonesResponse", milestonesResponse);
+    console.log("runInputs", this.runInputs);
+
     // @ts-ignore because the types for body are not correct
     const milestones = (milestonesResponse?.milestones as IMilestone[]) ?? ([] as IMilestone[]);
     let milestone: IMilestone | undefined;
@@ -47,6 +51,7 @@ export default class TestrailService {
         }
 
         if (milestone) {
+          console.log("milestone", milestone);
           break;
         }
       }

@@ -44,6 +44,7 @@ export async function run(): Promise<void> {
         // TODO: Use glob pattern to find the testrail report file
         // https://github.com/isaacs/node-glob#readme
         testRunConfigs = await getTrunkTestRunConfigs();
+        console.log("testRunConfigs", testRunConfigs);
         for (const testRun of testRunConfigs) {
           await reportToTestrail(
             closeMilestone,
@@ -127,6 +128,8 @@ async function reportToTestrail(
   const results = trunkMode
     ? await extractTestResults(testRunConfig.projectId, testRunConfig.suiteId)
     : await extractTestResults();
+
+  console.log("results", results);
 
   if (!results.length) {
     setFailed("No results for reporting to TestRail were found.");
