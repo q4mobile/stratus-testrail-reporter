@@ -7,7 +7,7 @@ jest.mock("testrail-api");
 const MockClient = TestRailApiClient as jest.MockedClass<typeof TestRailApiClient>;
 const options = { host: "https://testrail.example", user: "user", password: "key" };
 const runInputs = {
-  jiraKey: "SBR-3392",
+  jiraKey: "ABC-123",
   trunkMode: true,
   regressionMode: false,
   testRunConfig: { projectId: 27, suiteId: 55346 },
@@ -84,7 +84,7 @@ describe("TestrailService", () => {
         const body =
           offset === 0
             ? { milestones: pageOne, _links: { next: "/api/v2/get_milestones/27&offset=250" } }
-            : { milestones: [{ id: 9001, refs: "SBR-3392" }], _links: { next: null } };
+            : { milestones: [{ id: 9001, refs: "ABC-123" }], _links: { next: null } };
         return { response: { statusCode: 200 }, body };
       }) as never);
 
@@ -105,7 +105,7 @@ describe("TestrailService", () => {
       client().getMilestones.mockResolvedValue({
         response: {},
         body: {
-          milestones: [{ id: 5, refs: "SBR-3392" }],
+          milestones: [{ id: 5, refs: "ABC-123" }],
           _links: { next: "/api/v2/get_milestones/27&offset=250" },
         },
       } as never);
@@ -125,7 +125,7 @@ describe("TestrailService", () => {
       } as never);
       client().addMilestone.mockResolvedValue({
         response: {},
-        body: { id: 77, refs: "SBR-3392" },
+        body: { id: 77, refs: "ABC-123" },
       } as never);
 
       const milestone = await service.establishMilestone();

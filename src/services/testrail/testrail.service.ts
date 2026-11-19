@@ -12,13 +12,13 @@ import TestrailApiClient from "testrail-api";
 import { RunInputs } from "../../run/run.definition";
 import { chunk, withTimeout } from "../../utils";
 
-// TestRail stores an add_results_for_cases request of more than ~5,080 results but never answers it
-// (SBR-3392), so results are posted in batches well under that.
+// TestRail stores an add_results_for_cases request of more than ~5,080 results but never answers it,
+// so results are posted in batches well under that.
 export const RESULTS_BATCH_SIZE = 1000;
 // A request TestRail never answers fails the step after this, instead of hanging the job.
 export const REQUEST_TIMEOUT_MS = 120_000;
 // TestRail's maximum page size for list endpoints.
-const MILESTONES_PAGE_SIZE = 250;
+const TESTRAIL_MAX_PAGE_SIZE = 250;
 
 export default class TestrailService {
   private readonly testRailClient: TestrailApiClient;
@@ -205,7 +205,7 @@ export default class TestrailService {
   /**
    * Open milestones, one page at a time. get_milestones returns at most 250 per page; reading only
    * the first page meant a project with more open milestones never found the one for its Jira key
-   * and created a new one on every run (SBR-3392). Callers stop as soon as they have what they need.
+   * and created a new one on every run. Callers stop as soon as they have what they need.
    */
   async *milestonePages(): AsyncGenerator<IMilestone[]> {
     let offset = 0;
@@ -213,7 +213,7 @@ export default class TestrailService {
     while (true) {
       const milestoneFilters = {
         is_completed: 0,
-        limit: MILESTONES_PAGE_SIZE,
+        limit: TESTRAIL_MAX_PAGE_SIZE,
         offset,
       } as unknown as IMilestoneFilters; // the filter type has no paging fields
       const { body } = await this.call(`get_milestones (offset ${offset})`, () =>
