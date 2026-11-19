@@ -27,7 +27,7 @@ describe("TestrailService", () => {
   });
 
   describe("addTestRunResults", () => {
-    it("XXXXXXXXX: [Given] more results than one batch [When] they are added [Then] they are posted in sequential batches of at most the batch size", async () => {
+    it("[Given] more results than one batch [When] they are added [Then] they are posted in sequential batches of at most the batch size", async () => {
       const service = new TestrailService(options, runInputs);
       const sizes: number[] = [];
       let inFlight = 0;
@@ -52,7 +52,7 @@ describe("TestrailService", () => {
       expect(body).toHaveLength(5118);
     });
 
-    it("XXXXXXXXX: [Given] a batch TestRail never answers [When] the timeout passes [Then] the call rejects naming the request and batch", async () => {
+    it("[Given] a batch TestRail never answers [When] the timeout passes [Then] the call rejects naming the request and batch", async () => {
       jest.useFakeTimers();
       const service = new TestrailService(options, runInputs);
       client().addResultsForCases.mockImplementation(() => new Promise(() => undefined));
@@ -70,7 +70,7 @@ describe("TestrailService", () => {
   });
 
   describe("establishMilestone", () => {
-    it("XXXXXXXXX: [Given] the project has more than one page of open milestones and the Jira key's milestone is on page two [When] the milestone is established [Then] it reuses that milestone and creates none", async () => {
+    it("[Given] the project has more than one page of open milestones and the Jira key's milestone is on page two [When] the milestone is established [Then] it reuses that milestone and creates none", async () => {
       const service = new TestrailService(options, runInputs);
       const pageOne = Array.from({ length: 250 }, (_, index) => ({
         id: index + 1,
@@ -100,7 +100,7 @@ describe("TestrailService", () => {
       expect(client().addMilestone).not.toHaveBeenCalled();
     });
 
-    it("XXXXXXXXX: [Given] the Jira key's milestone is on the first of several pages [When] the milestone is established [Then] it stops reading pages once it is found", async () => {
+    it("[Given] the Jira key's milestone is on the first of several pages [When] the milestone is established [Then] it stops reading pages once it is found", async () => {
       const service = new TestrailService(options, runInputs);
       client().getMilestones.mockResolvedValue({
         response: {},
@@ -117,7 +117,7 @@ describe("TestrailService", () => {
       expect(client().addMilestone).not.toHaveBeenCalled();
     });
 
-    it("XXXXXXXXX: [Given] no open milestone references the Jira key on any page [When] the milestone is established [Then] a new milestone is created once", async () => {
+    it("[Given] no open milestone references the Jira key on any page [When] the milestone is established [Then] a new milestone is created once", async () => {
       const service = new TestrailService(options, runInputs);
       client().getMilestones.mockResolvedValue({
         response: {},
