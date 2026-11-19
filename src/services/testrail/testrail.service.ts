@@ -10,6 +10,15 @@ import type {
 } from "testrail-api";
 import TestrailApiClient from "testrail-api";
 import { RunInputs } from "../../run/run.definition";
+import { chunk, withTimeout } from "../../utils";
+
+// TestRail stores an add_results_for_cases request of more than ~5,080 results but never answers it
+// (SBR-3392), so results are posted in batches well under that.
+export const RESULTS_BATCH_SIZE = 1000;
+// A request TestRail never answers fails the step after this, instead of hanging the job.
+export const REQUEST_TIMEOUT_MS = 120_000;
+// TestRail's maximum page size for list endpoints.
+const MILESTONES_PAGE_SIZE = 250;
 
 export default class TestrailService {
   private readonly testRailClient: TestrailApiClient;
@@ -24,36 +33,16 @@ export default class TestrailService {
   }
 
   async establishMilestone(): Promise<IMilestone | undefined> {
-    const { body: milestonesResponse } = await this.getMilestones();
-    // @ts-ignore because the types for body are not correct
-    const milestones = (milestonesResponse?.milestones as IMilestone[]) ?? ([] as IMilestone[]);
     let milestone: IMilestone | undefined;
 
-    if (this.runInputs.trunkMode) {
-      // Check if the current milestone or any of its child milestones match the jiraKey
-      for (const currentMilestone of milestones ?? []) {
-        // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
-        if (currentMilestone?.refs?.includes(this.runInputs.jiraKey)) {
-          milestone = currentMilestone;
-          break;
-        }
+    for await (const milestones of this.milestonePages()) {
+      milestone = this.runInputs.trunkMode
+        ? this.findJiraKeyMilestone(milestones)
+        : // in git mode we simply want the latest milestone; in regression mode one is created
+          // below if none is found
+          milestones[0];
 
-        for (const childMilestone of currentMilestone?.milestones ?? []) {
-          // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
-          if (childMilestone?.refs?.includes(this.runInputs.jiraKey)) {
-            milestone = childMilestone;
-            break;
-          }
-        }
-
-        if (milestone) {
-          break;
-        }
-      }
-    } else {
-      // if we're in git mode, we simply want to grab the latest milestone
-      // if we're in regression mode, we'll also create a new milestone if one is not found
-      milestone = milestones?.[0];
+      if (milestone || !this.runInputs.trunkMode) break;
     }
 
     if (milestone) {
@@ -101,7 +90,7 @@ export default class TestrailService {
       // if a test run is to be returned, we need to reset the results
       const testRun = testRuns?.[0];
 
-      await this.testRailClient.addResultsForCases(
+      await this.addTestRunResults(
         testRun?.id,
         results.map((currentResult) => ({
           ...currentResult,
@@ -141,18 +130,35 @@ export default class TestrailService {
     runId: number,
     testRailResults: INewTestResult[]
   ): PromiseResponse<ITestResult[]> {
-    return this.testRailClient.addResultsForCases(runId, testRailResults);
+    const batches = chunk(testRailResults, RESULTS_BATCH_SIZE);
+    const added: ITestResult[] = [];
+    let response;
+
+    // In sequence, so TestRail is never handed more than one batch at a time.
+    for (const [index, batch] of batches.entries()) {
+      const label = `add_results_for_cases/${runId} (batch ${index + 1} of ${batches.length})`;
+      const result = await this.call(label, () =>
+        this.testRailClient.addResultsForCases(runId, batch)
+      );
+      response = result.response;
+      added.push(...((result.body as ITestResult[]) ?? []));
+    }
+
+    // @ts-ignore because response is only undefined when there were no results to add
+    return { response, body: added };
   }
 
   async attachTestRunsToMilestone(runs: ITestRun[], milestone_id: number): Promise<ITestRun[]> {
     if (!runs.length) return Promise.resolve([]);
 
     const promises = runs.map((run) => {
-      // @ts-ignore because case_ids aren't actually required
-      return this.testRailClient.updateRun(run.id, {
-        ...run,
-        milestone_id,
-      });
+      return this.call(`update_run/${run.id}`, () =>
+        // @ts-ignore because case_ids aren't actually required
+        this.testRailClient.updateRun(run.id, {
+          ...run,
+          milestone_id,
+        })
+      );
     });
 
     await Promise.all(promises);
@@ -167,47 +173,94 @@ export default class TestrailService {
       ...filters,
     };
 
-    return this.testRailClient.getCases(this.runInputs.testRunConfig.projectId, caseFilters);
+    return this.call("get_cases", () =>
+      this.testRailClient.getCases(this.runInputs.testRunConfig.projectId, caseFilters)
+    );
   }
 
   async getTestRuns(filters?: Partial<ITestRun>): PromiseResponse<ITestRun[]> {
     const testRunFilters = { refs: this.runInputs.jiraKey, is_completed: 0, ...filters };
 
-    return this.testRailClient.getRuns(this.runInputs.testRunConfig.projectId, testRunFilters);
-  }
-
-  async createTestRun(testRunOptions: INewTestRun): PromiseResponse<ITestRun> {
-    return this.testRailClient.addRun(this.runInputs.testRunConfig.projectId, testRunOptions);
-  }
-
-  async closeTestRun(runId: number): PromiseResponse<ITestRun> {
-    return this.testRailClient.closeRun(runId);
-  }
-
-  async getTestSuite(): PromiseResponse<ISuite> {
-    return this.testRailClient.getSuite(this.runInputs.testRunConfig.suiteId);
-  }
-
-  async getMilestones(): PromiseResponse<IMilestone[]> {
-    // @ts-ignore because getMilestones response is typed incorrectly
-    const milestoneFilters: IMilestoneFilters = { is_completed: 0 };
-
-    return this.testRailClient.getMilestones(
-      this.runInputs.testRunConfig.projectId,
-      milestoneFilters
+    return this.call("get_runs", () =>
+      this.testRailClient.getRuns(this.runInputs.testRunConfig.projectId, testRunFilters)
     );
   }
 
+  async createTestRun(testRunOptions: INewTestRun): PromiseResponse<ITestRun> {
+    return this.call("add_run", () =>
+      this.testRailClient.addRun(this.runInputs.testRunConfig.projectId, testRunOptions)
+    );
+  }
+
+  async closeTestRun(runId: number): PromiseResponse<ITestRun> {
+    return this.call(`close_run/${runId}`, () => this.testRailClient.closeRun(runId));
+  }
+
+  async getTestSuite(): PromiseResponse<ISuite> {
+    return this.call("get_suite", () =>
+      this.testRailClient.getSuite(this.runInputs.testRunConfig.suiteId)
+    );
+  }
+
+  /**
+   * Open milestones, one page at a time. get_milestones returns at most 250 per page; reading only
+   * the first page meant a project with more open milestones never found the one for its Jira key
+   * and created a new one on every run (SBR-3392). Callers stop as soon as they have what they need.
+   */
+  async *milestonePages(): AsyncGenerator<IMilestone[]> {
+    let offset = 0;
+
+    while (true) {
+      const milestoneFilters = {
+        is_completed: 0,
+        limit: MILESTONES_PAGE_SIZE,
+        offset,
+      } as unknown as IMilestoneFilters; // the filter type has no paging fields
+      const { body } = await this.call(`get_milestones (offset ${offset})`, () =>
+        this.testRailClient.getMilestones(this.runInputs.testRunConfig.projectId, milestoneFilters)
+      );
+      // @ts-ignore because the types for body are not correct
+      const milestones = (body?.milestones as IMilestone[]) ?? [];
+
+      yield milestones;
+
+      // @ts-ignore because _links is not included in the interfaces
+      if (!body?._links?.next || !milestones.length) return;
+      offset += milestones.length;
+    }
+  }
+
+  /** The milestone, or child milestone, whose refs include the Jira key. */
+  private findJiraKeyMilestone(milestones: IMilestone[]): IMilestone | undefined {
+    for (const currentMilestone of milestones) {
+      // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
+      if (currentMilestone?.refs?.includes(this.runInputs.jiraKey)) return currentMilestone;
+
+      // @ts-ignore because child milestones are not included in the interfaces
+      for (const childMilestone of currentMilestone?.milestones ?? []) {
+        // @ts-ignore because refs, while being a part of milestones, is not included in the interfaces
+        if (childMilestone?.refs?.includes(this.runInputs.jiraKey)) return childMilestone;
+      }
+    }
+
+    return undefined;
+  }
+
   async createMilestone(milestoneOptions: INewMilestone): PromiseResponse<IMilestone> {
-    return this.testRailClient.addMilestone(
-      this.runInputs.testRunConfig.projectId,
-      milestoneOptions
+    return this.call("add_milestone", () =>
+      this.testRailClient.addMilestone(this.runInputs.testRunConfig.projectId, milestoneOptions)
     );
   }
 
   async closeMilestone(milestone_id: number): PromiseResponse<IMilestone> {
-    return this.testRailClient.updateMilestone(milestone_id, {
-      is_completed: 1,
-    });
+    return this.call(`update_milestone/${milestone_id}`, () =>
+      this.testRailClient.updateMilestone(milestone_id, {
+        is_completed: 1,
+      })
+    );
+  }
+
+  private call<T>(label: string, request: () => Promise<T>): Promise<T> {
+    return withTimeout(request(), REQUEST_TIMEOUT_MS, label);
   }
 }
